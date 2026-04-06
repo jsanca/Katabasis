@@ -1,6 +1,6 @@
 package jsanca.katabasis.core.internal.execution;
 
-import jsanca.download.api.model.DownloadConfig;
+import jsanca.katabasis.core.api.model.DownloadConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

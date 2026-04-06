@@ -162,6 +162,10 @@ public final class PauseCoordinator {
                         return;
                     }
 
+                    if (!this.pauseRequested) {
+                        break;
+                    }
+
                     this.resumed.await(PAUSE_POLL_MILLIS, TimeUnit.MILLISECONDS);
                 }
 

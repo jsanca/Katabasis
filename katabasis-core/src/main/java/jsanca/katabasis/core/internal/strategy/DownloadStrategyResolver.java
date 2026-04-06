@@ -29,7 +29,7 @@ public interface DownloadStrategyResolver {
      *
      * @param info the download information
      */
-    static void validate(DownloadInfo info) {
+    default void validate(DownloadInfo info) {
         Objects.requireNonNull(info, "info must not be null");
     }
 }

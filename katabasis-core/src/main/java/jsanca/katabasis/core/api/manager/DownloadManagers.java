@@ -146,6 +146,7 @@ public final class DownloadManagers {
                 ));
             } finally {
                 this.downloadRegistry.remove(info.downloadId());
+                this.pauseCoordinator.clear(info.downloadId());
             }
         }
 
@@ -188,12 +189,60 @@ public final class DownloadManagers {
 
         @Override
         public DownloadControlResult pause(final String downloadId) {
-            return null;
+            Objects.requireNonNull(downloadId, "downloadId must not be null");
+            log.debug("Pause requested for downloadId={}", downloadId);
+            final Optional<DownloadTask> downloadTaskOpt = this.downloadRegistry.findTask(downloadId);
+
+            if (downloadTaskOpt.isPresent()) {
+                log.debug("Download found. Forwarding pause request for downloadId={}", downloadId);
+                this.pauseCoordinator.requestPause(downloadId);
+
+                return new DownloadControlResult(
+                        downloadId,
+                        DownloadControlAction.PAUSE,
+                        DownloadControlStatus.REQUESTED,
+                        "Pause requested for download " + downloadId,
+                        downloadTaskOpt.get().snapshot()
+                );
+            }
+
+            log.debug("Pause request ignored because download was not found: {}", downloadId);
+            return new DownloadControlResult(
+                    downloadId,
+                    DownloadControlAction.PAUSE,
+                    DownloadControlStatus.NOT_FOUND,
+                    "Could not invoke pause because task was not found: " + downloadId,
+                    null
+            );
         }
 
         @Override
         public DownloadControlResult resume(final String downloadId) {
-            return null;
+            Objects.requireNonNull(downloadId, "downloadId must not be null");
+            log.debug("Resume requested for downloadId={}", downloadId);
+            final Optional<DownloadTask> downloadTaskOpt = this.downloadRegistry.findTask(downloadId);
+
+            if (downloadTaskOpt.isPresent()) {
+                log.debug("Download found. Forwarding resume request for downloadId={}", downloadId);
+                this.pauseCoordinator.requestResume(downloadId);
+
+                return new DownloadControlResult(
+                        downloadId,
+                        DownloadControlAction.RESUME,
+                        DownloadControlStatus.REQUESTED,
+                        "Resume requested for download " + downloadId,
+                        downloadTaskOpt.get().snapshot()
+                );
+            }
+
+            log.debug("Resume request ignored because download was not found: {}", downloadId);
+            return new DownloadControlResult(
+                    downloadId,
+                    DownloadControlAction.RESUME,
+                    DownloadControlStatus.NOT_FOUND,
+                    "Could not invoke resume because task was not found: " + downloadId,
+                    null
+            );
         }
     }
 }

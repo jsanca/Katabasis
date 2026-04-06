@@ -1,6 +1,6 @@
 package jsanca.katabasis.core.internal.util;
 
-import jsanca.download.api.event.DownloadErrorCode;
+import jsanca.katabasis.core.api.event.DownloadErrorCode;
 
 import java.io.IOException;
 

@@ -1,8 +1,8 @@
 package jsanca.katabasis.core.internal.strategy;
 
-import jsanca.download.api.event.DownloadEvent;
+import jsanca.katabasis.core.api.event.DownloadEvent;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
-import jsanca.download.internal.model.DownloadTask;
+import jsanca.katabasis.core.internal.model.DownloadTask;
 
 import java.util.Objects;
 import java.util.function.Consumer;

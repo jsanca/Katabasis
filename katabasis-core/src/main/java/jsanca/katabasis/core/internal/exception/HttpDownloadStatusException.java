@@ -1,14 +1,15 @@
 package jsanca.katabasis.core.internal.exception;
 
-import jsanca.download.api.event.DownloadErrorCode;
-import jsanca.download.api.model.DownloadInfo;
+
+import jsanca.katabasis.core.api.event.DownloadErrorCode;
+import jsanca.katabasis.core.api.model.DownloadInfo;
 
 import java.io.IOException;
 import java.util.Objects;
 
 public  class HttpDownloadStatusException extends IOException {
 
-    private final DownloadInfo info;
+    private final jsanca.katabasis.core.api.model.DownloadInfo info;
     private final int statusCode;
 
     public HttpDownloadStatusException(final DownloadInfo info,

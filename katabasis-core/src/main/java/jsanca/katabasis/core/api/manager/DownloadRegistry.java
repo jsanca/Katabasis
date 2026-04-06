@@ -1,6 +1,6 @@
 package jsanca.katabasis.core.api.manager;
 
-import jsanca.download.api.model.DownloadTaskSnapshot;
+import jsanca.katabasis.core.api.model.DownloadTaskSnapshot;
 import jsanca.katabasis.core.internal.model.DownloadTask;
 
 import java.util.Collections;

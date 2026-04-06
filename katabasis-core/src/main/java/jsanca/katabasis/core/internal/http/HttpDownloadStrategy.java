@@ -1,7 +1,7 @@
 package jsanca.katabasis.core.internal.http;
 
-import jsanca.download.api.event.*;
-import jsanca.download.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.event.*;
+import jsanca.katabasis.core.api.model.DownloadInfo;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
 import jsanca.katabasis.core.internal.exception.HttpDownloadStatusException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
@@ -180,6 +180,22 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
 
             // if pause was requested, so wait
             handlePauseRequest(task, totalBytes, pauseCoordinator, emitter, downloadId, info, downloadedBytes);
+
+            if (task.isCancellationRequested()) {
+
+                log.info("Cancelling the current download after pause handling: {}", info.downloadId());
+                final double progress = totalBytes > 0
+                        ? Math.min(1.0d, (double) downloadedBytes.longValue() / totalBytes)
+                        : 0.0d;
+
+                throw new DownloadCancelledException(
+                        info,
+                        downloadedBytes.longValue(),
+                        totalBytes,
+                        progress,
+                        Instant.now()
+                );
+            }
         }
 
         return downloadedBytes.longValue();

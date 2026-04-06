@@ -12,9 +12,8 @@
     <artifactId>katabasis-ui</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <groupId>codex</groupId>
 
-    <name>download-ui</name>
+    <name>katabasis-ui</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -24,7 +23,22 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>project-local-repo</id>
+            <url>file://${user.home}/.m2/repository</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -63,7 +77,15 @@
             <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
         </dependency>
+
+        <!-- katabasis -->
+        <dependency>
+            <groupId>jsanca.katabasis</groupId>
+            <artifactId>katabasis-core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -71,7 +93,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>jsanca.katabasis.ui.app.DownloadManagerApplication</mainClass>
+                    <mainClass>jsanca.katabasis.ui.app.KatabasisLauncher</mainClass>
                 </configuration>
             </plugin>
         </plugins>

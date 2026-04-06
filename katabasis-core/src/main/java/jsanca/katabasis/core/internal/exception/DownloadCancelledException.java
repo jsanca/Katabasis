@@ -1,6 +1,7 @@
 package jsanca.katabasis.core.internal.exception;
 
-import jsanca.download.api.model.DownloadInfo;
+
+import jsanca.katabasis.core.api.model.DownloadInfo;
 
 import java.time.Instant;
 
