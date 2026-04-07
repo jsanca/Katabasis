@@ -1,0 +1,155 @@
+/* Stitch ID Dark Mode Theme */
+
+.root {
+    -fx-base: #111424; /* Deep dark blue background */
+    -fx-background-color: #111424;
+    -fx-font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    -fx-text-fill: #E0E7FF; /* Off-white / light blue text */
+    -fx-accent: #00E5FF; /* Cyan accent */
+}
+
+/* Typography base */
+.label {
+    -fx-text-fill: #E0E7FF;
+}
+
+.title-label {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+.subtitle-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #B8C4D9;
+}
+
+/* ListView setup */
+.list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.list-view .scroll-bar:horizontal .track,
+.list-view .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+}
+
+.list-view .scroll-bar:horizontal .thumb,
+.list-view .scroll-bar:vertical .thumb {
+    -fx-background-color: #2D3656;
+    -fx-background-radius: 4px;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 6px 0px;
+}
+.list-cell:empty {
+    -fx-background-color: transparent;
+}
+.list-cell:filled:selected:focused, .list-cell:filled:selected {
+    -fx-background-color: transparent;
+    -fx-text-fill: inherit;
+}
+
+/* Card Style for Rows */
+.download-card {
+    -fx-background-color: #1A1F35; /* Card background */
+    -fx-background-radius: 12px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
+    -fx-border-color: #2D3656;
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+}
+.list-cell:filled:hover .download-card {
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 229, 255, 0.15), 15, 0, 0, 0);
+    -fx-border-color: #3b466d;
+}
+
+/* Progress bar inside card */
+.styled-progress-bar {
+    -fx-min-height: 8px;
+    -fx-pref-height: 8px;
+    -fx-max-height: 8px;
+}
+.styled-progress-bar .track {
+    -fx-background-color: #0b0f1a;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+}
+.styled-progress-bar .bar {
+    -fx-background-color: #00E5FF;
+    -fx-background-radius: 4px;
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+}
+
+/* Text styles within card */
+.card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #FFFFFF;
+}
+
+.card-status {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #2D3656;
+    -fx-text-fill: #E0E7FF;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 16px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+}
+.button:hover {
+    -fx-background-color: #3b466d;
+}
+.button:pressed {
+    -fx-background-color: #1A1F35;
+}
+
+/* Primary CTA Button */
+.primary-cta {
+    -fx-background-color: linear-gradient(to right, #0052D4, #4364F7, #6FB1FC); /* Blue gradient */
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 10px 20px;
+    -fx-effect: dropshadow(three-pass-box, rgba(67, 100, 247, 0.4), 10, 0, 0, 4);
+}
+.primary-cta:hover {
+    -fx-background-color: linear-gradient(to right, #005bed, #4c6efa, #7dbaff);
+}
+
+/* Icon Button (Pause/Resume/Cancel) */
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-padding: 6px;
+    -fx-background-radius: 50%;
+}
+.icon-button:hover {
+    -fx-background-color: #2D3656;
+}
+.icon-button .svg-path {
+    -fx-fill: #8E9BB0;
+}
+.icon-button:hover .svg-path {
+    -fx-fill: #FFFFFF;
+}
+.icon-button.cancel-button:hover .svg-path {
+    -fx-fill: #FF5252;
+}
+
+/* Status-specific text fills */
+.status-completed { -fx-text-fill: #00E676; }
+.status-failed { -fx-text-fill: #FF5252; }
+.status-paused { -fx-text-fill: #FFC400; }
+.status-in-progress { -fx-text-fill: #00E5FF; }
+.status-pending { -fx-text-fill: #8E9BB0; }
