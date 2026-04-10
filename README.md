@@ -148,3 +148,80 @@ manager.submit(new DownloadRequest(
     URI.create("https://example.com/file.pdf"),
     Path.of("./file.pdf")
 ));
+```
+
+
+## Build and package the JavaFX application
+
+The project now supports building a custom runtime image with `jlink` and packaging a macOS app bundle with `jpackage`.
+
+### Requirements
+
+- JDK 25 installed and available on `PATH`
+- Maven installed and available on `PATH`
+- The JavaFX UI module already builds successfully
+
+### 1. Build the project
+
+From the repository root:
+
+```bash
+mvn clean install -DskipTests
+```
+
+### 2. Generate the custom runtime image with jlink
+
+From the repository root:
+
+```bash
+mvn -f katabasis-ui/pom.xml clean org.openjfx:javafx-maven-plugin:0.0.8:jlink -DskipTests
+```
+
+This creates the runtime image under:
+
+```text
+katabasis-ui/target/katabasis
+```
+
+You can test the generated launcher with:
+
+```bash
+./katabasis-ui/target/katabasis/bin/katabasis
+```
+
+### 3. Package the macOS app image with jpackage
+
+From the repository root:
+
+```bash
+jpackage \
+  --type app-image \
+  --name Katabasis \
+  --dest "$(pwd)/dist" \
+  --runtime-image "$(pwd)/katabasis-ui/target/katabasis" \
+  --module jsanca.katabasis.ui/jsanca.katabasis.ui.app.KatabasisLauncher
+```
+
+This generates the application bundle at:
+
+```text
+dist/Katabasis.app
+```
+
+You can open it with:
+
+```bash
+open dist/Katabasis.app
+```
+
+### Notes
+
+- If `dist/Katabasis.app` already exists, remove it before packaging again:
+
+```bash
+rm -rf dist/Katabasis.app
+```
+
+- The `jlink` image is intended for local testing and as the runtime input for `jpackage`.
+- A custom application icon can be added later to improve the macOS bundle appearance.
+
