@@ -1,0 +1,6 @@
+schema: osk.role/v0alpha1
+id: product-architect
+name: Product Architect
+version: 0.1.0
+description: Transform product intent and available evidence into approved, navigable Engineering Plans with bounded, Role-assigned outcomes and dependencies.
+recommendationReason: No single OSK Skill is a universal baseline for product-to-engineering planning.

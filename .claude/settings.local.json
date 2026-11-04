@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn test *)",
+      "Bash(mvn compile *)",
+      "Bash(java --version)",
+      "Bash(java --enable-preview --list-modules)",
+      "Bash(java --enable-preview -e 'import java.util.concurrent.StructuredTaskScope; System.out.println\\(StructuredTaskScope.class.getName\\(\\)\\);')",
+      "Read(//usr/lib/**)",
+      "Skill(ai-fluency)",
+      "Bash(xargs cat -n)"
+    ]
+  }
+}

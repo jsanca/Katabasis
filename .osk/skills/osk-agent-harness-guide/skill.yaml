@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-agent-harness-guide
+name: Agent Harness Guide
+version: 0.1.0
+description: Guide engineering agents to select available harness and tool capabilities contextually, preserve execution boundaries, conserve context, and verify claims with authoritative evidence.
+entrypoint: SKILL.md
+capabilities:
+  - harness-capability-guidance
+tags: [harness-awareness, tool-selection, bounded-execution, information-gain, authoritative-evidence, graceful-degradation]

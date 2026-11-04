@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-verification-engineering
+name: Verification Engineering
+version: 0.1.2
+description: Transform requirements and use cases into reproducible verification automation, pinned evidence, and outcomes.
+entrypoint: SKILL.md
+capabilities:
+  - verification-engineering
+tags: [qa, verification, test-case-design, acceptance-criteria, reproducible-tests, test-evidence, evidence-snapshots]

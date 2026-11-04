@@ -1,7 +1,8 @@
 package jsanca.katabasis.core.internal.strategy;
 
+import jsanca.katabasis.core.api.model.DownloadConfig;
 import jsanca.katabasis.core.api.model.DownloadInfo;
-import jsanca.katabasis.core.internal.http.HttpDownloadStrategy;
+import jsanca.katabasis.core.internal.http.HttpDownloadOrchestrator;
 import jsanca.katabasis.core.internal.model.Scheme;
 
 import java.util.Objects;
@@ -19,14 +20,24 @@ public final class DefaultDownloadStrategyResolver implements DownloadStrategyRe
     private final DownloadStrategy httpDownloadStrategy;
 
     /**
-     * Creates a resolver with the default HTTP strategy.
+     * Creates a resolver using default configuration.
      */
     public DefaultDownloadStrategyResolver() {
-        this(new HttpDownloadStrategy());
+        this(DownloadConfig.defaultConfig());
     }
 
     /**
-     * Creates a resolver with an explicit HTTP strategy.
+     * Creates a resolver using the given download configuration.
+     *
+     * @param config the configuration driving segmentation thresholds and counts
+     */
+    public DefaultDownloadStrategyResolver(final DownloadConfig config) {
+        this(new HttpDownloadOrchestrator(
+                Objects.requireNonNull(config, "config must not be null")));
+    }
+
+    /**
+     * Creates a resolver with an explicit HTTP strategy. Intended for testing.
      *
      * @param httpDownloadStrategy the strategy used for HTTP and HTTPS downloads
      */

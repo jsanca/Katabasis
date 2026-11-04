@@ -1,2 +1,8 @@
-jsanca/katabasis/core/internal/execution/DownloadExecutorsTest.class
+jsanca/katabasis/core/internal/http/SegmentedHttpDownloadStrategyTest.class
 jsanca/katabasis/core/internal/util/FileNameResolverTest.class
+jsanca/katabasis/core/internal/http/HttpDownloadOrchestratorTest.class
+jsanca/katabasis/core/internal/http/SegmentedHttpDownloadStrategyTest$TestHttpServer.class
+jsanca/katabasis/core/internal/execution/DownloadExecutorsTest.class
+jsanca/katabasis/core/internal/http/HttpDownloadSupportTest.class
+jsanca/katabasis/core/internal/http/HttpRangeSupportTest.class
+jsanca/katabasis/core/internal/http/HttpDownloadOrchestratorTest$TestHttpServer.class

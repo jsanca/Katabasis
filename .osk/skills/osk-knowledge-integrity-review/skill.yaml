@@ -1,0 +1,12 @@
+schema: osk.skill/v0alpha1
+id: osk-knowledge-integrity-review
+name: Knowledge Integrity Review
+version: 0.1.0
+description: Inspect durable project knowledge for integrity issues, produce evidence-backed findings and reconciliation plans, and apply only explicitly authorized narrow corrections.
+entrypoint: SKILL.md
+capabilities:
+  - knowledge-integrity-review
+tags: [documentation, knowledge, integrity, authority, evidence, reconciliation, review]
+assets:
+  - path: references/review-template.md
+    kind: reference

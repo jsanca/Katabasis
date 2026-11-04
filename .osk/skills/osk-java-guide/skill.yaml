@@ -1,0 +1,12 @@
+schema: osk.skill/v0alpha1
+id: osk-java-guide
+name: Java Engineering Guide
+version: 0.1.0
+description: Provide curated, framework-neutral modern Java guidance for clear, typed, testable implementation.
+entrypoint: SKILL.md
+capabilities:
+  - java-engineering-guidance
+tags: [java, idiomatic, types, immutability, implementation]
+assets:
+  - path: references
+    kind: reference

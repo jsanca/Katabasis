@@ -1,0 +1,10 @@
+schema: osk.role/v0alpha1
+id: engineering-reviewer
+name: Engineering Reviewer
+version: 0.1.0
+description: Independently assess engineering soundness, risks, assumptions, and evidence gaps.
+recommendationReason: These practices examine structural soundness, boundaries, and counterexamples independently of implementation.
+recommendedSkills:
+  - osk-architecture-review
+  - osk-boundary-review
+  - osk-adversarial-analysis

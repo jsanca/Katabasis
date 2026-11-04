@@ -1,0 +1,9 @@
+schema: osk.external-capability-provenance/v0alpha1
+capabilityID: diagram-design
+ownership: external
+upstreamSource: git@github.com:cathrynlavery/diagram-design.git
+resolvedCommit: a5e3978088cf89c7caff5c20cabd99fbc2a301de
+upstreamManifestVersion: 2.3.5
+upstreamSkillVersion: 2.3
+license: MIT
+materializationVersion: 0.1.1

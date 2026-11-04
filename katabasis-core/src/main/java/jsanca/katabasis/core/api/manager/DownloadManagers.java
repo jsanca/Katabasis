@@ -74,7 +74,7 @@ public final class DownloadManagers {
         private final PauseCoordinator pauseCoordinator = new PauseCoordinator();
 
         DefaultDownloadManager(final DownloadConfig config, final DownloadExecutor executor) {
-            this(config, executor, new DefaultDownloadStrategyResolver());
+            this(config, executor, new DefaultDownloadStrategyResolver(config));
         }
 
         DefaultDownloadManager(final DownloadConfig config,

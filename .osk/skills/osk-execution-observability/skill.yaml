@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-execution-observability
+name: Execution Observability
+version: 0.1.0
+description: Make agent execution progress, decisions, convergence, and risks visible to a human supervisor.
+entrypoint: SKILL.md
+capabilities:
+  - execution-observability
+tags: [execution-observability, supervisor-visibility, progress-checkpoints, verbosity-mode, loop-prevention]

@@ -1,0 +1,4 @@
+--patch-module
+jsanca.katabasis.core=_
+--add-reads
+jsanca.katabasis.core=ALL-UNNAMED

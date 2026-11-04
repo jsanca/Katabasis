@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-execution-timebox
+name: Execution Timebox
+version: 0.1.0
+description: Bound execution and require a recovery checkpoint on interruption, timeout, or invalid execution.
+entrypoint: SKILL.md
+capabilities:
+  - execution-timeboxing
+tags: [timebox, recovery, checkpoints, process]

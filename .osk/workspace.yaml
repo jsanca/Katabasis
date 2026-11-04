@@ -1,0 +1,276 @@
+schema: osk.workspace/v0alpha1
+blueprint:
+  id: default
+  version: 0.1.5
+# OSK:ROLES:BEGIN
+roles:
+  engineering-reviewer:
+    version: 0.1.0
+    installedPath: .osk/roles/engineering-reviewer
+    fingerprint: 44620fe6fdefdcb05a564db69951557517abe08165c2177a03a812694181c6a3
+    canonicalSHA256: 44620fe6fdefdcb05a564db69951557517abe08165c2177a03a812694181c6a3
+  knowledge-curator:
+    version: 0.1.0
+    installedPath: .osk/roles/knowledge-curator
+    fingerprint: 5c734b7c62a8ebf3f04d5882c316c140cf82dbe89499a34506336c08706f1b7e
+    canonicalSHA256: 5c734b7c62a8ebf3f04d5882c316c140cf82dbe89499a34506336c08706f1b7e
+  platform-engineer:
+    version: 0.1.0
+    installedPath: .osk/roles/platform-engineer
+    fingerprint: 3f0abf9d69c7ed6790a0ad86be48a03b47377b690a9876218c4aa76f8227fada
+    canonicalSHA256: 3f0abf9d69c7ed6790a0ad86be48a03b47377b690a9876218c4aa76f8227fada
+  product-architect:
+    version: 0.1.0
+    installedPath: .osk/roles/product-architect
+    fingerprint: d2ad25bf122b4d08fbcd2e186b76fa646115711ce6a87c13eb6aece231a1ca5d
+    canonicalSHA256: d2ad25bf122b4d08fbcd2e186b76fa646115711ce6a87c13eb6aece231a1ca5d
+  qa-engineer:
+    version: 0.2.0
+    installedPath: .osk/roles/qa-engineer
+    fingerprint: 6225f6047d73d5943d1794b7553773630d6c296cec77fed2061c5b90f4489d80
+    canonicalSHA256: 6225f6047d73d5943d1794b7553773630d6c296cec77fed2061c5b90f4489d80
+  software-engineer:
+    version: 0.2.0
+    installedPath: .osk/roles/software-engineer
+    fingerprint: 748f2378d3b6a68b4b7e806f47a19423fad84f4746067f0887733af800d841fd
+    canonicalSHA256: 748f2378d3b6a68b4b7e806f47a19423fad84f4746067f0887733af800d841fd
+# OSK:ROLES:END
+# OSK:SKILLS:BEGIN
+skills:
+  diagram-design:
+    version: 2.3.5
+    category: external
+    ownership: external
+    catalogPath: capabilities/diagram-design/capability.yaml
+    installedPath: .osk/skills/diagram-design
+    fingerprint: 58b96ca771abd2b28df689e5e0198780f72830bbd7e71a7c52f537df1d5c7a35
+    canonicalSHA256: 58b96ca771abd2b28df689e5e0198780f72830bbd7e71a7c52f537df1d5c7a35
+    source: git@github.com:cathrynlavery/diagram-design.git
+    resolvedCommit: a5e3978088cf89c7caff5c20cabd99fbc2a301de
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 013abcc732b87a30071d87e7726761c08b857036ddfe804f9b5d902b01e281af
+      claude-code: e7c02c09419c4486f3b16f9191136de483e8395ff457a2c779274cf56a45ac6f
+      codex: d7f104119e69bc8dea5c8ebde942fc319e696ee642d140ec6bf1b8a37b19b0db
+      opencode: a900fd3a0826d2fa3ef236f4a2116e93c14fbbe2e739f643e0fb47ad3bc909f8
+  osk-adversarial-analysis:
+    version: 0.1.0
+    category: architecture
+    ownership: osk
+    catalogPath: architecture/osk-adversarial-analysis
+    installedPath: .osk/skills/osk-adversarial-analysis
+    fingerprint: 39ac16afcf608098307e3df9cf930118a50cc5e72e379528379fd7a6a208ac89
+    canonicalSHA256: 39ac16afcf608098307e3df9cf930118a50cc5e72e379528379fd7a6a208ac89
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 6c48718e2a9b2d7a279a31f95a5129077489d0eb06d078d20e8797be4555ee5f
+      claude-code: 061294e7659d9b281c3685ef8f29bb5b52c0685783101453dee4a04bde545c4c
+      codex: 585fb14da084f88b3d3214a1e62e49b705fd0ff6033f192e2e753aed4ecfbda1
+      opencode: 07c028c706d2567f73d4f86f6ee3bb06721c338d037d1d90bda586675f1ad31e
+  osk-agent-harness-guide:
+    version: 0.1.0
+    category: guide
+    ownership: osk
+    catalogPath: guide/osk-agent-harness-guide
+    installedPath: .osk/skills/osk-agent-harness-guide
+    fingerprint: f4b7a5b65c22bb98fded72a3a084a03550b50b2bd7efb6ef433e0486f8cf234c
+    canonicalSHA256: f4b7a5b65c22bb98fded72a3a084a03550b50b2bd7efb6ef433e0486f8cf234c
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 8e1bae53edffb2c0351fcd26f9294e8527dd0b8625db33dc45d6293c26c55287
+      claude-code: 6e19f8cf2562e66c3ebc0ea59f562ffe1b8e42cd6c4b878bb6ab993fad49b10b
+      codex: 74c3270b31722be414edfb693fb1978ad14b820873c4fa3cdfbb73fe29e3bcfb
+      opencode: c4155fc41af4b1404f1e05145d770784d594d9967432e3425f2589ffae9e2433
+  osk-architecture-review:
+    version: 0.1.0
+    category: architecture
+    ownership: osk
+    catalogPath: architecture/osk-architecture-review
+    installedPath: .osk/skills/osk-architecture-review
+    fingerprint: 1499aab46d5ccd75afe56987832d7d9d509279407fdd3c61e011c02d0f037633
+    canonicalSHA256: 1499aab46d5ccd75afe56987832d7d9d509279407fdd3c61e011c02d0f037633
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 656d7379c42f231ef8808a8ffb66e204db7b893fe6c837391e3b1ed57468b380
+      claude-code: e947858a033cd25712ccebc718fc23dbcbad3435304edcf7b30550f31d7c9187
+      codex: eb753983fb511ca50a9fe53e04e75ac4839d05c9fe58e3b63383bb2ea1767f2b
+      opencode: 499a60e3f0a1908f0ebc1d5831fa78d9a8cb7607bd41faf42c969e93fdea01e1
+  osk-boundary-review:
+    version: 0.1.0
+    category: architecture
+    ownership: osk
+    catalogPath: architecture/osk-boundary-review
+    installedPath: .osk/skills/osk-boundary-review
+    fingerprint: ff4b83f8341947b36b0db1bad28c9ccad439376f5ac822a074f40a0a73ff2dba
+    canonicalSHA256: ff4b83f8341947b36b0db1bad28c9ccad439376f5ac822a074f40a0a73ff2dba
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 0f837e4208f267ffea482c4ac47de3dae3425ca91340d8e52d18bd77fe816b6e
+      claude-code: 2064d37e235e81b2cd74fdba41b88bf77d8770e03e1b0902c198e038c135da4c
+      codex: 7e3c22d6cec4a0dfe18992bbc8a6a81bc8035120bfa1d022becfe5e0d1df613f
+      opencode: 0a16ab941ba7e31f8edc67725a07094b13cb318665ee8c1b73b48f057f266e4a
+  osk-code-docs:
+    version: 0.1.0
+    category: documentation
+    ownership: osk
+    catalogPath: documentation/osk-code-docs
+    installedPath: .osk/skills/osk-code-docs
+    fingerprint: 98a3ea38b9a576330542c0ba32c66cdd06848a76defe9a3752dcfc0a97d78d8c
+    canonicalSHA256: 98a3ea38b9a576330542c0ba32c66cdd06848a76defe9a3752dcfc0a97d78d8c
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 97ac3fee1c46ff5a04ec64a76264e6d7fbb079baa415ac1250dc0eaf9e0f576e
+      claude-code: a7d16136d1f1ad2d437481a1df33e22e5cda51358c0c6b8af1d1f1e5e1ae98c2
+      codex: 466c73b39dc79d2f0915d317f15c749a96309e9cafb2f455e77414cdb641acdd
+      opencode: 6ab7988a11b1339b41c45f73d4cec0ee91ec316dfecc7b8508a8dfac1b303886
+  osk-engineering-reporting:
+    version: 0.1.2
+    category: process
+    ownership: osk
+    catalogPath: process/osk-engineering-reporting
+    installedPath: .osk/skills/osk-engineering-reporting
+    fingerprint: 6758ae0243b2b3f9da5e30ba0a1d1be8b99d0336ccbf0d37d7eb03ffcb7c5a17
+    canonicalSHA256: 6758ae0243b2b3f9da5e30ba0a1d1be8b99d0336ccbf0d37d7eb03ffcb7c5a17
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: f9bd6e2aa7ebf67574c7e9b4ba342dc6c5d67248734a7f7156b21778160ea832
+      claude-code: feb15d98f4016702f0eae76277881669491d8226a41f58e526097ba2ce3f3ff4
+      codex: 1423e8c376948769ad7f39ef31ef3a41a85e6d10c44aef9d0680e924058fcb75
+      opencode: 13a3a4bce7c8ba12b0809c7ee87a4182906397f0f7dc351a28548e993f2c6e0c
+  osk-execution-observability:
+    version: 0.1.0
+    category: process
+    ownership: osk
+    catalogPath: process/osk-execution-observability
+    installedPath: .osk/skills/osk-execution-observability
+    fingerprint: 8d140f1d105b0c3b153df8dff85a5a2f2c5bc3497e0582afdcf15a9bbc36f7a0
+    canonicalSHA256: 8d140f1d105b0c3b153df8dff85a5a2f2c5bc3497e0582afdcf15a9bbc36f7a0
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: f1bd5bb1f63833a44b78cd8eace6705e685157f2866b87ea9faf7a099225ec3c
+      claude-code: b1423e5ad380b4244edc9c361db3c374cd748a2b0f8ad041a7e7ac45c09bfc8d
+      codex: b1328a62d3a029097a191f2c657bf7c02612f6d723ceac8e659da0c63c450bdd
+      opencode: d7c314fc91e2189e750142901340563a2741b8f6b153662673bc31cdf01217a0
+  osk-execution-timebox:
+    version: 0.1.0
+    category: process
+    ownership: osk
+    catalogPath: process/osk-execution-timebox
+    installedPath: .osk/skills/osk-execution-timebox
+    fingerprint: e28573765e6f319d2a5acf2df3ad8da1494347d2b3c78d4c63001bb26160cda3
+    canonicalSHA256: e28573765e6f319d2a5acf2df3ad8da1494347d2b3c78d4c63001bb26160cda3
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: c007f0ce443dfbadd0d5656758600321eb4fffac2d58ecd7fcacd65632694f22
+      claude-code: dfd80eef624345153205e235a7710888e8af3c4b991637a0c73d9e69475cb82e
+      codex: 2ed2a74eabd6af0b1b01adfaf9a65febac94a37f81a3eccb4db986fe49458997
+      opencode: 171a76281b36440a550c5ad3347e250102891c047065d22138f04069e1faee2a
+  osk-java-guide:
+    version: 0.1.0
+    category: guide/java
+    ownership: osk
+    catalogPath: guide/java/osk-java-guide
+    installedPath: .osk/skills/osk-java-guide
+    fingerprint: 44a447a0c25e2e605856fa4e989507bcc1cd6161d188acf4480e7069d57ee94f
+    canonicalSHA256: 44a447a0c25e2e605856fa4e989507bcc1cd6161d188acf4480e7069d57ee94f
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 61e82aaeedbddafdb5ae448b9598a130e312f91af1399ce41b63802e5f053594
+      claude-code: b9f5eedfb12c21bf7f844958f5cea30b05fbd3eabd10941b2da9f3bde2bd7f41
+      codex: 0f55037c1284c126c39f8d2a690cde9e39ce8199072ecb8ea7b835bedb3c2f83
+      opencode: 52e42787f1d6305b186fe29ee13e7f2457c49140b4bf74e88873605d51651d18
+  osk-knowledge-curator:
+    version: 0.1.0
+    category: documentation
+    ownership: osk
+    catalogPath: documentation/osk-knowledge-curator
+    installedPath: .osk/skills/osk-knowledge-curator
+    fingerprint: 09504707180cc20ba0abd78b777c4e6268c8e79af990e89de0a3b671696b0fe1
+    canonicalSHA256: 09504707180cc20ba0abd78b777c4e6268c8e79af990e89de0a3b671696b0fe1
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: cd4552fe6c21121f3343e678549309df33b1dbdd9695e17dd69153e2103f4c15
+      claude-code: 6f34bbb8bd6fe4174d201d4832a7dcb2af1e16f94cb5e92ea621013635d05ccf
+      codex: 455720af006d0f1328ac3713e521a623f463bab4e8935132ccfe5839869ec892
+      opencode: b44645420cf7747569793ef5b4af61259e5883062ef7175a742edaf2bdc5bd44
+  osk-knowledge-integrity-review:
+    version: 0.1.0
+    category: documentation
+    ownership: osk
+    catalogPath: documentation/osk-knowledge-integrity-review
+    installedPath: .osk/skills/osk-knowledge-integrity-review
+    fingerprint: 096b4dba1d97aca858e9e6eab81df96b9eca64601525d9b0af3f5b61f23d1de5
+    canonicalSHA256: 096b4dba1d97aca858e9e6eab81df96b9eca64601525d9b0af3f5b61f23d1de5
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: d89c9f2ffa2413e902a59e6ca7873cc835d0c49228d6cef0659b94d8fda02b8b
+      claude-code: 1cdf71c136eb2b8168f595a9c4762374e0de23f558f42926c977a992ffef2d56
+      codex: 7faed19b2e46c6730f5084433407e8a7df1cf1bb5a169e4bd5a3d9e05045f175
+      opencode: a62a3fbb35f377c37f01b039397dcd772d1e01142486e4200c35976d8f6c58db
+  osk-verification-engineering:
+    version: 0.1.2
+    category: process
+    ownership: osk
+    catalogPath: process/osk-verification-engineering
+    installedPath: .osk/skills/osk-verification-engineering
+    fingerprint: a76b5a30fd2e9e6cfc3dd8183b8f777d1067d089d011bf3bb0e81c89bf9be2a0
+    canonicalSHA256: a76b5a30fd2e9e6cfc3dd8183b8f777d1067d089d011bf3bb0e81c89bf9be2a0
+    adapters:
+      agents: installed
+      claude-code: installed
+      codex: installed
+      opencode: installed
+    adapterSHA256:
+      agents: 2cb0e057bd5dea32e21adba9f007ef0b62cd5133268ec960b7505ab2404ef4db
+      claude-code: 550cf3c2966dc054e629e26c81387d83c2f75e76b549f2f1997c89e6504535ba
+      codex: 0e2f239735022b373b19e869ddb894d67ea18f9660b597f5cc3858598f456ae4
+      opencode: 0448a0f13ce279ecefaab091baedaefa9249a44b51d22c253e37e33d24cc9f2b
+# OSK:SKILLS:END

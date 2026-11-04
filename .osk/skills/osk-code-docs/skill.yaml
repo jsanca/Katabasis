@@ -1,0 +1,14 @@
+schema: osk.skill/v0alpha1
+id: osk-code-docs
+name: Code Documentation Publication
+version: 0.1.0
+description: Publish selected authoritative project knowledge and native API reference as traceable, generated documentation for human readers.
+entrypoint: SKILL.md
+capabilities:
+  - documentation-publication
+tags: [documentation, publication, markdown, mermaid, api-reference]
+assets:
+  - path: references/publication-model.md
+    kind: reference
+  - path: references/maven-site.md
+    kind: reference

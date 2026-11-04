@@ -1,0 +1,14 @@
+schema: osk.skill/v0alpha1
+id: osk-engineering-reporting
+name: Engineering Reporting
+version: 0.1.2
+description: Produce durable, evidence-based implementation, review, fix, checkpoint, audit, and engineering-log records.
+entrypoint: SKILL.md
+capabilities:
+  - engineering-reporting
+tags: [reporting, evidence, checkpoints, engineering-log, durable-artifacts, process]
+assets:
+  - path: references/report-template.md
+    kind: reference
+  - path: references/engineering-log-template.md
+    kind: reference

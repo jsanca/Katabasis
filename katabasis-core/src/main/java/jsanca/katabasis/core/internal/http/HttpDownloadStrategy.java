@@ -3,15 +3,12 @@ package jsanca.katabasis.core.internal.http;
 import jsanca.katabasis.core.api.event.*;
 import jsanca.katabasis.core.api.model.DownloadInfo;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
-import jsanca.katabasis.core.internal.exception.HttpDownloadStatusException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.PauseCoordinator;
 import jsanca.katabasis.core.internal.execution.PauseListener;
 import jsanca.katabasis.core.internal.model.DownloadTask;
 import jsanca.katabasis.core.internal.strategy.DownloadStrategy;
-import jsanca.katabasis.core.internal.util.MapperExceptionUtil;
 import jsanca.katabasis.core.internal.util.PathPreparer;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,10 +19,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -47,9 +44,7 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
      * Creates a strategy using a default JDK {@link HttpClient}.
      */
     public HttpDownloadStrategy() {
-        this(HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build(), DEFAULT_BUFFER_SIZE);
+        this(HttpClients.createDefault(), DEFAULT_BUFFER_SIZE);
     }
 
     /**
@@ -91,7 +86,7 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
 
             if (isInvalidResponseStatus(statusCode)) {
 
-                throw new HttpDownloadStatusException(info, statusCode);
+                throw new jsanca.katabasis.core.internal.exception.HttpDownloadStatusException(info, statusCode);
             }
 
             final long totalBytes = response.headers()
@@ -106,33 +101,15 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                 final long downloadedBytes = doDownload(task, inputStream, outputStream,
                         totalBytes, pauseCoordinator, emitter);
                 outputStream.flush();
-                onComplete(info, emitter, startedAt, downloadedBytes);
+                HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
             }
         } catch (DownloadCancelledException e) {
 
-            onCancelled(info, emitter, e);
+            HttpDownloadSupport.onCancelled(info, emitter, e);
         } catch (Exception e) {
 
-            onError(info, emitter, e, startedAt);
+            HttpDownloadSupport.onError(info, emitter, e, startedAt);
         }
-    }
-
-    private static void onComplete(final DownloadInfo info,
-                                   final Consumer<DownloadEvent> emitter,
-                                   final Instant startedAt,
-                                   final long downloadedBytes) {
-
-        final Duration duration = Duration.between(startedAt, Instant.now());
-        log.debug("HTTP download completed for {} in {} ms", info.downloadId(), duration.toMillis());
-
-        emitter.accept(new DownloadCompletedEvent(
-                info,
-                info.targetPath(),
-                downloadedBytes,
-                null,
-                duration,
-                Instant.now()
-        ));
     }
 
     private long doDownload(final DownloadTask task,
@@ -143,7 +120,7 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                             final Consumer<DownloadEvent> emitter) throws IOException, InterruptedException {
 
         final byte[] buffer = new byte[bufferSize];
-        final MutableLong downloadedBytes = new MutableLong(0L);
+        final AtomicLong downloadedBytes = new AtomicLong(0L);
         int bytesRead;
         final DownloadInfo info = task.info();
         final String downloadId = info.downloadId();
@@ -153,27 +130,17 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
             if (task.isCancellationRequested()) {
 
                 log.info("Cancelling the current download: {}", info.downloadId());
-                final double progress = totalBytes > 0
-                        ? Math.min(1.0d, (double) downloadedBytes.longValue() / totalBytes)
-                        : 0.0d;
-
-                throw new DownloadCancelledException(
-                        info,
-                        downloadedBytes.longValue(),
-                        totalBytes,
-                        progress,
-                        Instant.now()
-                );
+                HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
             }
             outputStream.write(buffer, 0, bytesRead);
-            downloadedBytes.add(bytesRead);
+            downloadedBytes.addAndGet(bytesRead);
 
             log.debug("HTTP progress {}: {}/{} bytes",
                     info.downloadId(), downloadedBytes, totalBytes);
 
             emitter.accept(new DownloadProgressEvent(
                     info,
-                    downloadedBytes.longValue(),
+                    downloadedBytes.get(),
                     totalBytes,
                     Instant.now()
             ));
@@ -184,21 +151,11 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
             if (task.isCancellationRequested()) {
 
                 log.info("Cancelling the current download after pause handling: {}", info.downloadId());
-                final double progress = totalBytes > 0
-                        ? Math.min(1.0d, (double) downloadedBytes.longValue() / totalBytes)
-                        : 0.0d;
-
-                throw new DownloadCancelledException(
-                        info,
-                        downloadedBytes.longValue(),
-                        totalBytes,
-                        progress,
-                        Instant.now()
-                );
+                HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
             }
         }
 
-        return downloadedBytes.longValue();
+        return downloadedBytes.get();
     }
 
     private void handlePauseRequest(final DownloadTask task,
@@ -207,7 +164,7 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                                     final Consumer<DownloadEvent> emitter,
                                     final String downloadId,
                                     final DownloadInfo info,
-                                    final MutableLong downloadedBytes) throws InterruptedException {
+                                    final AtomicLong downloadedBytes) throws InterruptedException {
 
         pauseCoordinator.awaitIfPaused(downloadId, task.cancellationToken(),
                 new PauseListener() {
@@ -217,29 +174,29 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                     public void onPaused() {
                         this.pausedAt = Instant.now();
                         log.info("HTTP download paused for {} at {}/{} bytes",
-                                info.downloadId(), downloadedBytes.longValue(), totalBytes);
-                        HttpDownloadStrategy.this.onPaused(info, emitter, downloadedBytes.longValue(), totalBytes, this.pausedAt);
+                                info.downloadId(), downloadedBytes.get(), totalBytes);
+                        HttpDownloadStrategy.this.onPaused(info, emitter, downloadedBytes.get(), totalBytes, this.pausedAt);
                     }
 
                     @Override
                     public void onResumed() {
                         final Instant resumedAt = Instant.now();
-                        final Duration pauseDuration = this.pausedAt != null
-                                ? Duration.between(this.pausedAt, resumedAt)
-                                : Duration.ZERO;
+                        final long pauseDuration = this.pausedAt != null
+                                ? java.time.Duration.between(this.pausedAt, resumedAt).toMillis()
+                                : 0L;
 
                         log.info("HTTP download resumed for {} after {} ms pause",
-                                info.downloadId(), pauseDuration.toMillis());
-                        HttpDownloadStrategy.this.onResumed(info, emitter, downloadedBytes.longValue(), totalBytes, resumedAt);
+                                info.downloadId(), pauseDuration);
+                        HttpDownloadStrategy.this.onResumed(info, emitter, downloadedBytes.get(), totalBytes, resumedAt);
                     }
                 });
     }
 
     private void onPaused(final DownloadInfo info,
-                                 final Consumer<DownloadEvent> emitter,
-                                 final long downloadedBytes,
-                                 final long totalBytes,
-                                 final Instant pausedAt) {
+                          final Consumer<DownloadEvent> emitter,
+                          final long downloadedBytes,
+                          final long totalBytes,
+                          final Instant pausedAt) {
 
         emitter.accept(new DownloadPausedEvent(
                 info,
@@ -250,10 +207,10 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
     }
 
     private void onResumed(final DownloadInfo info,
-                                  final Consumer<DownloadEvent> emitter,
-                                  final long downloadedBytes,
-                                  final long totalBytes,
-                                  final Instant resumedAt) {
+                           final Consumer<DownloadEvent> emitter,
+                           final long downloadedBytes,
+                           final long totalBytes,
+                           final Instant resumedAt) {
 
         emitter.accept(new DownloadResumedEvent(
                 info,
@@ -261,47 +218,6 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                 totalBytes,
                 resumedAt.truncatedTo(ChronoUnit.MILLIS)
         ));
-    }
-
-    private static void onCancelled(final DownloadInfo info,
-                                    final Consumer<DownloadEvent> emitter,
-                                    final DownloadCancelledException e) {
-
-        log.info("HTTP download cancelled for {}", info.downloadId());
-
-        emitter.accept(new DownloadCancelledEvent(
-                info,
-                e.cancelledAt(),
-                e.bytesRead(),
-                e.totalBytes(),
-                e.progress()
-        ));
-    }
-
-    private static void onError(final DownloadInfo info,
-                                final Consumer<DownloadEvent> emitter,
-                                final Exception e,
-                                final Instant startedAt) {
-
-        final Duration duration = Duration.between(startedAt, Instant.now());
-        log.error("HTTP download failed for {}", info.downloadId(), e);
-        final DownloadErrorCode errorCode = mapErrorCode(e);
-
-        emitter.accept(new DownloadFailedEvent(
-                info,
-                e.getMessage() != null ? e.getMessage() : "Download failed",
-                e,
-                duration,
-                Instant.now(),
-                errorCode
-        ));
-    }
-
-    private static DownloadErrorCode mapErrorCode(final Exception e) {
-        if (e instanceof HttpDownloadStatusException httpStatusException) {
-            return httpStatusException.mapHttpStatusToErrorCode();
-        }
-        return MapperExceptionUtil.mapExceptionToErrorCode(e);
     }
 
     private static boolean isInvalidResponseStatus(final int statusCode) {

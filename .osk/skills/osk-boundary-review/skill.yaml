@@ -1,0 +1,12 @@
+schema: osk.skill/v0alpha1
+id: osk-boundary-review
+name: Architecture Boundary Review
+version: 0.1.0
+description: Review whether artifacts, dependencies, and responsibilities stay within intended architectural boundaries.
+entrypoint: SKILL.md
+capabilities:
+  - architecture-boundary-review
+tags: [architecture, boundaries, dependency-direction, layering, module-ownership, framework-leakage, review]
+assets:
+  - path: examples
+    kind: example

@@ -1,0 +1,9 @@
+schema: osk.role/v0alpha1
+id: qa-engineer
+name: QA Engineer
+version: 0.2.0
+description: Establish whether relevant expected outcomes are supported by sufficient engineering evidence, preserving a bounded and traceable QA judgment.
+recommendationReason: QA requires reproducible verification methods plus durable reporting of evidence, gaps, and scoped conclusions.
+recommendedSkills:
+  - osk-verification-engineering
+  - osk-engineering-reporting

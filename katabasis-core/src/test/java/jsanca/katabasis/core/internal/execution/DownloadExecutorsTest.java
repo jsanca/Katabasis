@@ -46,7 +46,7 @@ class DownloadExecutorsTest {
 
         final int maxConcurrent = 2;
         final DownloadExecutor executor = DownloadExecutors.createVirtualThreadExecutor(
-                new DownloadConfig(maxConcurrent)
+                DownloadConfig.copyOf(DownloadConfig.defaultConfig()).maxConcurrentDownloads(maxConcurrent).build()
         );
 
         final int tasks = 6;

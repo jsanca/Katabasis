@@ -1,0 +1,10 @@
+schema: osk.role/v0alpha1
+id: knowledge-curator
+name: Knowledge Curator
+version: 0.1.0
+description: Maintain durable project knowledge coherence, traceability, and discoverability.
+recommendationReason: These practices maintain current knowledge, assess integrity, and publish durable technical documentation.
+recommendedSkills:
+  - osk-knowledge-curator
+  - osk-knowledge-integrity-review
+  - osk-code-docs

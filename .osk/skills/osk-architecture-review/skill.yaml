@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-architecture-review
+name: Architecture Review
+version: 0.1.0
+description: Evaluate software structure, boundaries, and contracts against intended architecture.
+entrypoint: SKILL.md
+capabilities:
+  - architecture-review
+tags: [architecture, review, quality]

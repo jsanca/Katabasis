@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-knowledge-curator
+name: Knowledge Curator
+version: 0.1.0
+description: Preserve the integrity, authority, discoverability, and durability of project knowledge.
+entrypoint: SKILL.md
+capabilities:
+  - knowledge-curation
+tags: [documentation, governance, knowledge]

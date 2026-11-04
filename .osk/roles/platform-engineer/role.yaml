@@ -1,0 +1,6 @@
+schema: osk.role/v0alpha1
+id: platform-engineer
+name: Platform Engineer
+version: 0.1.0
+description: Provide the operational environment needed to build, run, deploy, and observe software.
+recommendationReason: The current catalog has no canonical baseline Platform Skill.

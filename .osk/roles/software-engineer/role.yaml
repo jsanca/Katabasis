@@ -1,0 +1,6 @@
+schema: osk.role/v0alpha1
+id: software-engineer
+name: Software Engineer
+version: 0.2.0
+description: Deliver authorized engineering outcomes with project-grounded implementation, contextual obligations, proportionate evidence, and explicit handoffs.
+recommendationReason: No single OSK Skill is a universal baseline for every software slice.

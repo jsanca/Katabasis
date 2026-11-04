@@ -1,0 +1,9 @@
+schema: osk.skill/v0alpha1
+id: osk-adversarial-analysis
+name: Adversarial Analysis
+version: 0.1.0
+description: Falsify engineering assumptions with scoped counterexamples, failure-mode analysis, and evidence-backed hardening actions.
+entrypoint: SKILL.md
+capabilities:
+  - adversarial-analysis
+tags: [architecture, adversarial, assumptions, counterexamples, failure-modes, invariants, review]
