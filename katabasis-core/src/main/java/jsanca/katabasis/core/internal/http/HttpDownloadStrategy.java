@@ -104,25 +104,24 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
         PathPreparer.prepareParentDirectory(info.targetPath());
 
         final HttpResponse<InputStream> response = doGet(info);
-        final int statusCode = response.statusCode();
+        try (InputStream inputStream = response.body()) {
+            if (isInvalidResponseStatus(response.statusCode())) {
+                throw new jsanca.katabasis.core.internal.exception.HttpDownloadStatusException(
+                        info, response.statusCode());
+            }
 
-        if (isInvalidResponseStatus(statusCode)) {
-            throw new jsanca.katabasis.core.internal.exception.HttpDownloadStatusException(info, statusCode);
-        }
+            final long totalBytes = response.headers()
+                    .firstValueAsLong("Content-Length")
+                    .orElse(0L);
 
-        final long totalBytes = response.headers()
-                .firstValueAsLong("Content-Length")
-                .orElse(0L);
+            log.debug("HTTP response OK for {}. contentLength={}", info.downloadId(), totalBytes);
 
-        log.debug("HTTP response OK for {}. contentLength={}", info.downloadId(), totalBytes);
-
-        try (InputStream inputStream = response.body();
-             OutputStream outputStream = Files.newOutputStream(info.targetPath())) {
-
-            final long downloadedBytes = doDownload(task, inputStream, outputStream,
-                    totalBytes, pauseCoordinator, emitter);
-            outputStream.flush();
-            HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
+            try (OutputStream outputStream = Files.newOutputStream(info.targetPath())) {
+                final long downloadedBytes = doDownload(task, inputStream, outputStream,
+                        totalBytes, pauseCoordinator, emitter);
+                outputStream.flush();
+                HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
+            }
         }
     }
 

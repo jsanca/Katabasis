@@ -209,90 +209,94 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                 HttpResponse.BodyHandlers.ofInputStream()
         );
 
-        if (response.statusCode() != 206) {
-            throw new HttpDownloadStatusException(info, response.statusCode());
-        }
-
-        // Validate Content-Range and ETag before reading a single byte.
-        HttpRangeSupport.validateSegmentResponseHeaders(response, chunk, identity);
-
-        log.debug("Chunk {} [{}-{}] started for {}",
-                chunk.index(), chunk.start(), chunk.end(), info.downloadId());
-
-        final byte[] buffer = new byte[bufferSize];
-        long position = chunk.start();
-        int bytesRead;
-        // Track bytes transferred in this attempt so we can rewind on failure.
-        long attemptBytes = 0;
-
-        final InactivityWatchdog watchdog = timeoutConfig.readInactivityTimeout()
-                .map(d -> new InactivityWatchdog(d, response.body(), pauseCoordinator, info.downloadId()))
-                .orElse(null);
-
+        // Wrap the body immediately so it is closed in every exit path, including
+        // status failures and header validation errors that precede the read loop.
         try (InputStream inputStream = response.body()) {
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-
-                if (watchdog != null) {
-                    watchdog.recordActivity();
-                }
-
-                // Prevent writing past the assigned segment boundary.
-                if (position + bytesRead > chunk.end() + 1) {
-                    throw new ResourceIntegrityException("chunk " + chunk.index()
-                            + ": server sent more bytes than expected (overflow past byte "
-                            + chunk.end() + ")");
-                }
-
-                if (task.isCancellationRequested()) {
-                    HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
-                }
-
-                final ByteBuffer bb = ByteBuffer.wrap(buffer, 0, bytesRead);
-                long written = 0;
-                while (bb.hasRemaining()) {
-                    written += channel.write(bb, position + written);
-                }
-                position += written;
-                attemptBytes += written;
-
-                final long newTotal = totalDownloaded.addAndGet(written);
-                emitter.accept(new DownloadProgressEvent(info, newTotal, contentLength, Instant.now()));
-
-                handlePauseRequest(task, pauseCoordinator, emitter, info,
-                                totalDownloaded, pausedFired, resumedFired);
-
-                if (watchdog != null) {
-                    watchdog.resetTimer();
-                }
-
-                if (task.isCancellationRequested()) {
-                    HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
-                }
+            if (response.statusCode() != 206) {
+                throw new HttpDownloadStatusException(info, response.statusCode());
             }
 
-            // Verify that the server sent the full range — not just a prefix.
-            HttpRangeSupport.validateSegmentByteCount(position - chunk.start(), chunk);
+            // Validate Content-Range and ETag before reading a single byte.
+            HttpRangeSupport.validateSegmentResponseHeaders(response, chunk, identity);
 
-        } catch (final DownloadCancelledException e) {
-            // Cancellation is terminal — do not rewind; the cancelled event uses totalDownloaded.
-            throw e;
-        } catch (final IOException e) {
-            // Rewind phantom bytes so progress does not exceed contentLength on retry.
-            totalDownloaded.addAndGet(-attemptBytes);
-            if (watchdog != null && watchdog.wasTriggered()) {
-                throw new ReadInactivityTimeoutException(
-                        "Read stalled on chunk " + chunk.index()
-                                + " for download " + info.downloadId()
-                                + " beyond " + timeoutConfig.readInactivityTimeout().get());
-            }
-            throw e;
-        } catch (final Exception e) {
-            // Rewind phantom bytes so progress does not exceed contentLength on retry.
-            totalDownloaded.addAndGet(-attemptBytes);
-            throw e;
-        } finally {
-            if (watchdog != null) {
-                watchdog.close();
+            log.debug("Chunk {} [{}-{}] started for {}",
+                    chunk.index(), chunk.start(), chunk.end(), info.downloadId());
+
+            final byte[] buffer = new byte[bufferSize];
+            long position = chunk.start();
+            int bytesRead;
+            // Track bytes transferred in this attempt so we can rewind on failure.
+            long attemptBytes = 0;
+
+            final InactivityWatchdog watchdog = timeoutConfig.readInactivityTimeout()
+                    .map(d -> new InactivityWatchdog(d, inputStream, pauseCoordinator, info.downloadId()))
+                    .orElse(null);
+
+            try {
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+
+                    if (watchdog != null) {
+                        watchdog.recordActivity();
+                    }
+
+                    // Prevent writing past the assigned segment boundary.
+                    if (position + bytesRead > chunk.end() + 1) {
+                        throw new ResourceIntegrityException("chunk " + chunk.index()
+                                + ": server sent more bytes than expected (overflow past byte "
+                                + chunk.end() + ")");
+                    }
+
+                    if (task.isCancellationRequested()) {
+                        HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
+                    }
+
+                    final ByteBuffer bb = ByteBuffer.wrap(buffer, 0, bytesRead);
+                    long written = 0;
+                    while (bb.hasRemaining()) {
+                        written += channel.write(bb, position + written);
+                    }
+                    position += written;
+                    attemptBytes += written;
+
+                    final long newTotal = totalDownloaded.addAndGet(written);
+                    emitter.accept(new DownloadProgressEvent(info, newTotal, contentLength, Instant.now()));
+
+                    handlePauseRequest(task, pauseCoordinator, emitter, info,
+                                    totalDownloaded, pausedFired, resumedFired);
+
+                    if (watchdog != null) {
+                        watchdog.resetTimer();
+                    }
+
+                    if (task.isCancellationRequested()) {
+                        HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
+                    }
+                }
+
+                // Verify that the server sent the full range — not just a prefix.
+                HttpRangeSupport.validateSegmentByteCount(position - chunk.start(), chunk);
+
+            } catch (final DownloadCancelledException e) {
+                // Cancellation is terminal — do not rewind; the cancelled event uses totalDownloaded.
+                throw e;
+            } catch (final IOException e) {
+                // Rewind phantom bytes so progress does not exceed contentLength on retry.
+                totalDownloaded.addAndGet(-attemptBytes);
+                if (watchdog != null && watchdog.wasTriggered()) {
+                    throw new ReadInactivityTimeoutException(
+                            "Read stalled on chunk " + chunk.index()
+                                    + " for download " + info.downloadId()
+                                    + " beyond " + timeoutConfig.readInactivityTimeout().get());
+                }
+                throw e;
+            } catch (final Exception e) {
+                // Rewind phantom bytes so progress does not exceed contentLength on retry.
+                totalDownloaded.addAndGet(-attemptBytes);
+                throw e;
+            } finally {
+                if (watchdog != null) {
+                    watchdog.close();
+                }
             }
         }
 
