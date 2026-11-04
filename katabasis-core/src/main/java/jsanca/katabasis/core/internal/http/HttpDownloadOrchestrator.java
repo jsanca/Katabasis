@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.http.HttpClient;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static jsanca.katabasis.core.internal.util.Preconditions.reject;
@@ -41,12 +42,17 @@ public final class HttpDownloadOrchestrator implements DownloadStrategy {
     private final int bufferSize;
 
     /**
-     * Creates an orchestrator with a default JDK {@link HttpClient}.
+     * Creates an orchestrator using an {@link HttpClient} configured from
+     * {@link DownloadConfig#httpTimeoutConfig()}.
      *
-     * @param config download configuration (used for segmentCount and segmentMinSizeBytes)
+     * @param config download configuration (used for segmentCount, segmentMinSizeBytes,
+     *               and timeout settings)
      */
     public HttpDownloadOrchestrator(final DownloadConfig config) {
-        this(HttpClients.createDefault(), config, DEFAULT_BUFFER_SIZE);
+        this(HttpClients.createFor(
+                     Objects.requireNonNull(config, "config must not be null")
+                             .httpTimeoutConfig()),
+                config, DEFAULT_BUFFER_SIZE);
     }
 
     /**
@@ -78,28 +84,61 @@ public final class HttpDownloadOrchestrator implements DownloadStrategy {
     }
 
     private DownloadStrategy resolveDelegate(final DownloadInfo info) {
-        HttpRangeSupport.RangeResponse rangeResponse = null;
+        final HttpRangeSupport.RangeResponse headResponse = headProbe(info);
+        if (headResponse == null
+                || !headResponse.acceptsRanges()
+                || headResponse.contentLength() < config.segmentMinSizeBytes()) {
+            log.debug("Selecting single-stream strategy for {} (acceptsRanges={}, contentLength={})",
+                    info.downloadId(),
+                    headResponse != null && headResponse.acceptsRanges(),
+                    headResponse != null ? headResponse.contentLength() : 0);
+            return new HttpDownloadStrategy(httpClient, bufferSize, config.httpTimeoutConfig());
+        }
+
+        // HEAD advertises ranges and size is above threshold: do a range capability probe
+        final Optional<ResourceIdentity> identity = rangeCapabilityProbe(info, headResponse);
+        if (identity.isEmpty()) {
+            log.debug("Range capability probe did not yield a strong identity for {} "
+                    + "— using single-stream", info.downloadId());
+            return new HttpDownloadStrategy(httpClient, bufferSize, config.httpTimeoutConfig());
+        }
+
+        log.debug("Selecting segmented strategy for {} (contentLength={}, segmentCount={}, eTag={})",
+                info.downloadId(), identity.get().contentLength(),
+                config.segmentCount(), identity.get().strongETag().orElse("<none>"));
+        return new SegmentedHttpDownloadStrategy(
+                httpClient,
+                config.segmentCount(),
+                identity.get(),
+                bufferSize,
+                config.httpTimeoutConfig());
+    }
+
+    private HttpRangeSupport.RangeResponse headProbe(final DownloadInfo info) {
         try {
-            rangeResponse = HttpRangeSupport.probe(httpClient, info.sourceUri());
-        } catch (Exception e) {
-            log.warn("Probe failed for {} — falling back to single-stream download",
+            return HttpRangeSupport.probe(httpClient, info.sourceUri(),
+                    config.httpTimeoutConfig().responseTimeout());
+        } catch (final Exception e) {
+            log.warn("HEAD probe failed for {} — falling back to single-stream",
                     info.downloadId(), e);
+            return null;
         }
+    }
 
-        if (rangeResponse != null
-                && rangeResponse.acceptsRanges()
-                && rangeResponse.contentLength() >= config.segmentMinSizeBytes()) {
-
-            log.debug("Selecting segmented strategy for {} (contentLength={}, segmentCount={})",
-                    info.downloadId(), rangeResponse.contentLength(), config.segmentCount());
-            return new SegmentedHttpDownloadStrategy(
+    private Optional<ResourceIdentity> rangeCapabilityProbe(
+            final DownloadInfo info,
+            final HttpRangeSupport.RangeResponse headResponse) {
+        try {
+            return HttpRangeSupport.rangeProbe(
                     httpClient,
-                    config.segmentCount(),
-                    rangeResponse.contentLength(),
-                    bufferSize);
+                    info.sourceUri(),
+                    headResponse.strongETag(),
+                    headResponse.contentLength(),
+                    config.httpTimeoutConfig().responseTimeout());
+        } catch (final Exception e) {
+            log.warn("Range capability probe failed for {} — falling back to single-stream",
+                    info.downloadId(), e);
+            return Optional.empty();
         }
-
-        log.debug("Selecting single-stream strategy for {}", info.downloadId());
-        return new HttpDownloadStrategy(httpClient, bufferSize);
     }
 }

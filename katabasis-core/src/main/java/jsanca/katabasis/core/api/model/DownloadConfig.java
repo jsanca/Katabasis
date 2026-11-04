@@ -6,11 +6,11 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * Engine configuration for concurrency, segmented downloads, checkpointing, and retry.
+ * Engine configuration for concurrency, segmented downloads, checkpointing, retry, and HTTP timeouts.
  *
  * <p>Defaults: four concurrent downloads, four segments, a 5 MB minimum
  * size before segmentation is considered, a 5-second checkpoint interval,
- * and no retries.
+ * no retries, and no timeout overrides.
  *
  * @param maxConcurrentDownloads maximum number of downloads executing at once
  * @param segmentCount number of chunks used for a segmented download
@@ -18,6 +18,8 @@ import java.util.Objects;
  * @param checkpointInterval how often the checkpoint coordinator persists progress;
  *                           must be positive
  * @param retryConfig global retry configuration; individual requests may override this
+ * @param httpTimeoutConfig HTTP timeout settings; use {@link HttpTimeoutConfig#disabled()}
+ *                          to apply no timeouts
  * @author jsanca &amp; elo
  */
 public record DownloadConfig(
@@ -25,12 +27,14 @@ public record DownloadConfig(
         int segmentCount,
         long segmentMinSizeBytes,
         Duration checkpointInterval,
-        RetryConfig retryConfig
+        RetryConfig retryConfig,
+        HttpTimeoutConfig httpTimeoutConfig
 ) {
 
     public DownloadConfig {
         Objects.requireNonNull(checkpointInterval, "checkpointInterval must not be null");
         Objects.requireNonNull(retryConfig, "retryConfig must not be null");
+        Objects.requireNonNull(httpTimeoutConfig, "httpTimeoutConfig must not be null");
         if (checkpointInterval.isNegative() || checkpointInterval.isZero()) {
             throw new IllegalArgumentException(
                     "checkpointInterval must be positive: " + checkpointInterval);
@@ -41,14 +45,16 @@ public record DownloadConfig(
      * Returns the default configuration.
      *
      * @return four concurrent downloads, four segments, 5 MB threshold, 5-second checkpoint,
-     *         no retries
+     *         no retries, no HTTP timeouts
      */
     public static DownloadConfig defaultConfig() {
-        return new DownloadConfig(4, 4, ByteSize.FIVE_MB, Duration.ofSeconds(5), RetryConfig.noRetry());
+        return new DownloadConfig(4, 4, ByteSize.FIVE_MB, Duration.ofSeconds(5),
+                RetryConfig.noRetry(), HttpTimeoutConfig.disabled());
     }
 
     /**
-     * Creates a builder with all values unset (checkpointInterval defaults to 5 seconds).
+     * Creates a builder with all values unset (checkpointInterval defaults to 5 seconds,
+     * httpTimeoutConfig defaults to disabled).
      *
      * @return a new builder
      */
@@ -68,7 +74,8 @@ public record DownloadConfig(
                 .segmentCount(config.segmentCount())
                 .segmentMinSizeBytes(config.segmentMinSizeBytes())
                 .checkpointInterval(config.checkpointInterval())
-                .retryConfig(config.retryConfig());
+                .retryConfig(config.retryConfig())
+                .httpTimeoutConfig(config.httpTimeoutConfig());
     }
 
     /**
@@ -80,6 +87,7 @@ public record DownloadConfig(
         private long segmentMinSizeBytes;
         private Duration checkpointInterval = Duration.ofSeconds(5);
         private RetryConfig retryConfig = RetryConfig.noRetry();
+        private HttpTimeoutConfig httpTimeoutConfig = HttpTimeoutConfig.disabled();
 
         private Builder() {}
 
@@ -140,6 +148,18 @@ public record DownloadConfig(
         }
 
         /**
+         * Sets the HTTP timeout configuration.
+         *
+         * @param httpTimeoutConfig the timeout configuration
+         * @return this builder
+         */
+        public Builder httpTimeoutConfig(final HttpTimeoutConfig httpTimeoutConfig) {
+            this.httpTimeoutConfig = Objects.requireNonNull(httpTimeoutConfig,
+                    "httpTimeoutConfig must not be null");
+            return this;
+        }
+
+        /**
          * Builds the configuration.
          *
          * @return a new {@link DownloadConfig}
@@ -147,7 +167,7 @@ public record DownloadConfig(
         public DownloadConfig build() {
             return new DownloadConfig(
                     maxConcurrentDownloads, segmentCount, segmentMinSizeBytes,
-                    checkpointInterval, retryConfig);
+                    checkpointInterval, retryConfig, httpTimeoutConfig);
         }
     }
 }

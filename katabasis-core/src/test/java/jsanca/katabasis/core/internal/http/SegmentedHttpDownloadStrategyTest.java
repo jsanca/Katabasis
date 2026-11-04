@@ -2,6 +2,8 @@ package jsanca.katabasis.core.internal.http;
 
 import jsanca.katabasis.core.api.event.*;
 import jsanca.katabasis.core.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.model.HttpTimeoutConfig;
+import jsanca.katabasis.core.internal.http.ResourceIdentity;
 import jsanca.katabasis.core.internal.exception.HttpDownloadStatusException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.PauseCoordinator;
@@ -181,7 +183,7 @@ class SegmentedHttpDownloadStrategyTest {
             final List<DownloadEvent> events = new CopyOnWriteArrayList<>();
 
             final SegmentedHttpDownloadStrategy strategy =
-                    new SegmentedHttpDownloadStrategy(httpClient(), 4, content.length, 512);
+                    new SegmentedHttpDownloadStrategy(httpClient(), 4, ResourceIdentity.ofSize(content.length), 512, HttpTimeoutConfig.disabled());
             strategy.download(task, ctx(), events::add);
 
             assertTrue(events.stream().anyMatch(e -> e instanceof DownloadCompletedEvent),
@@ -206,7 +208,7 @@ class SegmentedHttpDownloadStrategyTest {
             final List<DownloadEvent> events = new CopyOnWriteArrayList<>();
 
             final SegmentedHttpDownloadStrategy strategy =
-                    new SegmentedHttpDownloadStrategy(httpClient(), 4, content.length, 8192);
+                    new SegmentedHttpDownloadStrategy(httpClient(), 4, ResourceIdentity.ofSize(content.length), 8192, HttpTimeoutConfig.disabled());
             strategy.download(task, ctx(), events::add);
 
             assertTrue(events.stream().anyMatch(e -> e instanceof DownloadFailedEvent),
@@ -241,7 +243,7 @@ class SegmentedHttpDownloadStrategyTest {
             };
 
             final SegmentedHttpDownloadStrategy strategy =
-                    new SegmentedHttpDownloadStrategy(httpClient(), 4, content.length, 1024);
+                    new SegmentedHttpDownloadStrategy(httpClient(), 4, ResourceIdentity.ofSize(content.length), 1024, HttpTimeoutConfig.disabled());
 
             final Thread downloadThread = Thread.ofVirtual()
                     .start(() -> strategy.download(task, ctx(), emitter));
@@ -281,7 +283,7 @@ class SegmentedHttpDownloadStrategyTest {
             };
 
             final SegmentedHttpDownloadStrategy strategy =
-                    new SegmentedHttpDownloadStrategy(httpClient(), 4, content.length, 1024);
+                    new SegmentedHttpDownloadStrategy(httpClient(), 4, ResourceIdentity.ofSize(content.length), 1024, HttpTimeoutConfig.disabled());
 
             final Thread downloadThread = Thread.ofVirtual()
                     .start(() -> strategy.download(task,

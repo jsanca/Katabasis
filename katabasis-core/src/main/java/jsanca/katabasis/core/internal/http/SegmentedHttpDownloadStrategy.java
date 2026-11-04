@@ -2,6 +2,7 @@ package jsanca.katabasis.core.internal.http;
 
 import jsanca.katabasis.core.api.event.*;
 import jsanca.katabasis.core.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.model.HttpTimeoutConfig;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
 import jsanca.katabasis.core.internal.exception.HttpDownloadStatusException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
@@ -55,38 +56,47 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
 
     private final HttpClient httpClient;
     private final int segmentCount;
-    private final long contentLength;
+    private final ResourceIdentity identity;
     private final int bufferSize;
+    private final HttpTimeoutConfig timeoutConfig;
 
     /**
-     * Creates a strategy with a default JDK {@link HttpClient}.
+     * Creates a strategy with a default JDK {@link HttpClient} and no timeouts.
+     *
+     * <p>Use this constructor only in tests that bypass the orchestrator; in production the
+     * orchestrator always supplies a validated {@link ResourceIdentity}.
      *
      * @param segmentCount  number of parallel chunks (must be &gt; 0)
-     * @param contentLength total file size in bytes, pre-validated by the caller (must be &gt; 0)
+     * @param contentLength total file size in bytes (must be &gt; 0)
      */
     public SegmentedHttpDownloadStrategy(final int segmentCount, final long contentLength) {
-        this(HttpClients.createDefault(), segmentCount, contentLength, DEFAULT_BUFFER_SIZE);
+        this(HttpClients.createDefault(), segmentCount,
+                ResourceIdentity.ofSize(contentLength),
+                DEFAULT_BUFFER_SIZE, HttpTimeoutConfig.disabled());
     }
 
     /**
-     * Creates a strategy with an explicit HTTP client and buffer size.
+     * Creates a strategy with an explicit HTTP client, validated resource identity,
+     * buffer size, and timeout configuration.
      *
      * @param httpClient    the HTTP client to use
      * @param segmentCount  number of parallel chunks (must be &gt; 0)
-     * @param contentLength total file size in bytes, pre-validated by the caller (must be &gt; 0)
+     * @param identity      validated resource identity from the range capability probe
      * @param bufferSize    stream buffer size in bytes (must be &gt; 0)
+     * @param timeoutConfig timeout settings applied per-request and for stream inactivity
      */
     public SegmentedHttpDownloadStrategy(final HttpClient httpClient,
                                           final int segmentCount,
-                                          final long contentLength,
-                                          final int bufferSize) {
-        this.httpClient = Objects.requireNonNull(httpClient, "httpClient must not be null");
+                                          final ResourceIdentity identity,
+                                          final int bufferSize,
+                                          final HttpTimeoutConfig timeoutConfig) {
+        this.httpClient  = Objects.requireNonNull(httpClient,  "httpClient must not be null");
+        this.identity    = Objects.requireNonNull(identity,    "identity must not be null");
+        this.timeoutConfig = Objects.requireNonNull(timeoutConfig, "timeoutConfig must not be null");
         reject(segmentCount <= 0, "segmentCount must be > 0");
-        reject(contentLength <= 0, "contentLength must be > 0");
-        reject(bufferSize <= 0, "bufferSize must be > 0");
+        reject(bufferSize <= 0,   "bufferSize must be > 0");
         this.segmentCount = segmentCount;
-        this.contentLength = contentLength;
-        this.bufferSize = bufferSize;
+        this.bufferSize   = bufferSize;
     }
 
     @Override
@@ -98,6 +108,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
 
         final DownloadInfo info = task.info();
         final Instant startedAt = Instant.now();
+        final long contentLength = identity.contentLength();
         final AtomicLong totalDownloaded = new AtomicLong(0);
 
         log.debug("Starting segmented HTTP download for {} from {}", info.downloadId(), info.sourceUri());
@@ -189,15 +200,21 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                                  final AtomicBoolean resumedFired) throws IOException, InterruptedException {
 
         final DownloadInfo info = task.info();
+        final long contentLength = identity.contentLength();
+        final PauseCoordinator pauseCoordinator = context.pauseCoordinator();
 
         final HttpResponse<InputStream> response = httpClient.send(
-                HttpRangeSupport.rangeRequest(info.sourceUri(), chunk.start(), chunk.end()),
+                HttpRangeSupport.rangeRequestWithValidator(info.sourceUri(),
+                        chunk.start(), chunk.end(), identity, timeoutConfig.responseTimeout()),
                 HttpResponse.BodyHandlers.ofInputStream()
         );
 
         if (response.statusCode() != 206) {
             throw new HttpDownloadStatusException(info, response.statusCode());
         }
+
+        // Validate Content-Range and ETag before reading a single byte.
+        HttpRangeSupport.validateSegmentResponseHeaders(response, chunk, identity);
 
         log.debug("Chunk {} [{}-{}] started for {}",
                 chunk.index(), chunk.start(), chunk.end(), info.downloadId());
@@ -208,34 +225,75 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
         // Track bytes transferred in this attempt so we can rewind on failure.
         long attemptBytes = 0;
 
+        final InactivityWatchdog watchdog = timeoutConfig.readInactivityTimeout()
+                .map(d -> new InactivityWatchdog(d, response.body(), pauseCoordinator, info.downloadId()))
+                .orElse(null);
+
         try (InputStream inputStream = response.body()) {
             while ((bytesRead = inputStream.read(buffer)) != -1) {
+
+                if (watchdog != null) {
+                    watchdog.recordActivity();
+                }
+
+                // Prevent writing past the assigned segment boundary.
+                if (position + bytesRead > chunk.end() + 1) {
+                    throw new ResourceIntegrityException("chunk " + chunk.index()
+                            + ": server sent more bytes than expected (overflow past byte "
+                            + chunk.end() + ")");
+                }
 
                 if (task.isCancellationRequested()) {
                     HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
                 }
 
-                channel.write(ByteBuffer.wrap(buffer, 0, bytesRead), position);
-                position += bytesRead;
-                attemptBytes += bytesRead;
+                final ByteBuffer bb = ByteBuffer.wrap(buffer, 0, bytesRead);
+                long written = 0;
+                while (bb.hasRemaining()) {
+                    written += channel.write(bb, position + written);
+                }
+                position += written;
+                attemptBytes += written;
 
-                final long newTotal = totalDownloaded.addAndGet(bytesRead);
+                final long newTotal = totalDownloaded.addAndGet(written);
                 emitter.accept(new DownloadProgressEvent(info, newTotal, contentLength, Instant.now()));
 
-                handlePauseRequest(task, context.pauseCoordinator(), emitter, info,
+                handlePauseRequest(task, pauseCoordinator, emitter, info,
                                 totalDownloaded, pausedFired, resumedFired);
+
+                if (watchdog != null) {
+                    watchdog.resetTimer();
+                }
 
                 if (task.isCancellationRequested()) {
                     HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
                 }
             }
+
+            // Verify that the server sent the full range — not just a prefix.
+            HttpRangeSupport.validateSegmentByteCount(position - chunk.start(), chunk);
+
         } catch (final DownloadCancelledException e) {
             // Cancellation is terminal — do not rewind; the cancelled event uses totalDownloaded.
+            throw e;
+        } catch (final IOException e) {
+            // Rewind phantom bytes so progress does not exceed contentLength on retry.
+            totalDownloaded.addAndGet(-attemptBytes);
+            if (watchdog != null && watchdog.wasTriggered()) {
+                throw new ReadInactivityTimeoutException(
+                        "Read stalled on chunk " + chunk.index()
+                                + " for download " + info.downloadId()
+                                + " beyond " + timeoutConfig.readInactivityTimeout().get());
+            }
             throw e;
         } catch (final Exception e) {
             // Rewind phantom bytes so progress does not exceed contentLength on retry.
             totalDownloaded.addAndGet(-attemptBytes);
             throw e;
+        } finally {
+            if (watchdog != null) {
+                watchdog.close();
+            }
         }
 
         log.debug("Chunk {} [{}-{}] completed for {}",
@@ -262,8 +320,8 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                             resumedFired.set(false);
                             final long downloaded = totalDownloaded.get();
                             log.info("Segmented download paused for {} at {}/{} bytes",
-                                    info.downloadId(), downloaded, contentLength);
-                            emitter.accept(new DownloadPausedEvent(info, downloaded, contentLength,
+                                    info.downloadId(), downloaded, identity.contentLength());
+                            emitter.accept(new DownloadPausedEvent(info, downloaded, identity.contentLength(),
                                     this.pausedAt.truncatedTo(ChronoUnit.MILLIS)));
                         }
                     }
@@ -276,7 +334,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                             final Instant resumedAt = Instant.now();
                             final long downloaded = totalDownloaded.get();
                             log.info("Segmented download resumed for {}", info.downloadId());
-                            emitter.accept(new DownloadResumedEvent(info, downloaded, contentLength,
+                            emitter.accept(new DownloadResumedEvent(info, downloaded, identity.contentLength(),
                                     resumedAt.truncatedTo(ChronoUnit.MILLIS)));
                         }
                     }

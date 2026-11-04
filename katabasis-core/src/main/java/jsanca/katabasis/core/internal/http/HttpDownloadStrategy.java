@@ -2,6 +2,7 @@ package jsanca.katabasis.core.internal.http;
 
 import jsanca.katabasis.core.api.event.*;
 import jsanca.katabasis.core.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.model.HttpTimeoutConfig;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.PauseCoordinator;
@@ -40,24 +41,28 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
     private static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
     private final HttpClient httpClient;
     private final int bufferSize;
+    private final HttpTimeoutConfig timeoutConfig;
 
     /**
-     * Creates a strategy using a default JDK {@link HttpClient}.
+     * Creates a strategy using a default JDK {@link HttpClient} with no timeouts.
      */
     public HttpDownloadStrategy() {
-        this(HttpClients.createDefault(), DEFAULT_BUFFER_SIZE);
+        this(HttpClients.createDefault(), DEFAULT_BUFFER_SIZE, HttpTimeoutConfig.disabled());
     }
 
     /**
-     * Creates a strategy with a custom HTTP client and buffer size.
+     * Creates a strategy with a custom HTTP client, buffer size, and timeout configuration.
      *
-     * @param httpClient the HTTP client to use
-     * @param bufferSize the stream buffer size in bytes
+     * @param httpClient    the HTTP client to use
+     * @param bufferSize    the stream buffer size in bytes
+     * @param timeoutConfig timeout settings applied per-request and for stream inactivity
      */
     public HttpDownloadStrategy(final HttpClient httpClient,
-                                final int bufferSize) {
+                                final int bufferSize,
+                                final HttpTimeoutConfig timeoutConfig) {
 
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient must not be null");
+        this.timeoutConfig = Objects.requireNonNull(timeoutConfig, "timeoutConfig must not be null");
         if (bufferSize <= 0) {
             throw new IllegalArgumentException("bufferSize must be > 0");
         }
@@ -134,33 +139,56 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
         final DownloadInfo info = task.info();
         final String downloadId = info.downloadId();
 
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
+        final InactivityWatchdog watchdog = timeoutConfig.readInactivityTimeout()
+                .map(d -> new InactivityWatchdog(d, inputStream, pauseCoordinator, downloadId))
+                .orElse(null);
 
-            if (task.isCancellationRequested()) {
+        try {
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
 
-                log.info("Cancelling the current download: {}", info.downloadId());
-                HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
+                if (watchdog != null) {
+                    watchdog.recordActivity();
+                }
+
+                if (task.isCancellationRequested()) {
+                    log.info("Cancelling the current download: {}", info.downloadId());
+                    HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
+                }
+                outputStream.write(buffer, 0, bytesRead);
+                downloadedBytes.addAndGet(bytesRead);
+
+                log.debug("HTTP progress {}: {}/{} bytes",
+                        info.downloadId(), downloadedBytes, totalBytes);
+
+                emitter.accept(new DownloadProgressEvent(
+                        info,
+                        downloadedBytes.get(),
+                        totalBytes,
+                        Instant.now()
+                ));
+
+                // if pause was requested, wait; reset inactivity timer when resumed
+                handlePauseRequest(task, totalBytes, pauseCoordinator, emitter, downloadId, info, downloadedBytes);
+
+                if (watchdog != null) {
+                    watchdog.resetTimer();
+                }
+
+                if (task.isCancellationRequested()) {
+                    log.info("Cancelling the current download after pause handling: {}", info.downloadId());
+                    HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
+                }
             }
-            outputStream.write(buffer, 0, bytesRead);
-            downloadedBytes.addAndGet(bytesRead);
-
-            log.debug("HTTP progress {}: {}/{} bytes",
-                    info.downloadId(), downloadedBytes, totalBytes);
-
-            emitter.accept(new DownloadProgressEvent(
-                    info,
-                    downloadedBytes.get(),
-                    totalBytes,
-                    Instant.now()
-            ));
-
-            // if pause was requested, so wait
-            handlePauseRequest(task, totalBytes, pauseCoordinator, emitter, downloadId, info, downloadedBytes);
-
-            if (task.isCancellationRequested()) {
-
-                log.info("Cancelling the current download after pause handling: {}", info.downloadId());
-                HttpDownloadSupport.throwCancelled(info, downloadedBytes, totalBytes);
+        } catch (final IOException e) {
+            if (watchdog != null && watchdog.wasTriggered()) {
+                throw new ReadInactivityTimeoutException(
+                        "Read stalled for download " + downloadId
+                                + " beyond " + timeoutConfig.readInactivityTimeout().get());
+            }
+            throw e;
+        } finally {
+            if (watchdog != null) {
+                watchdog.close();
             }
         }
 
@@ -210,10 +238,8 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
 
     private HttpResponse<InputStream> doGet(final DownloadInfo info) throws IOException, InterruptedException {
 
-        final HttpRequest request = HttpRequest.newBuilder(info.sourceUri())
-                .GET()
-                .build();
-
-        return this.httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        final HttpRequest.Builder builder = HttpRequest.newBuilder(info.sourceUri()).GET();
+        timeoutConfig.responseTimeout().ifPresent(builder::timeout);
+        return this.httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
     }
 }

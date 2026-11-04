@@ -14,6 +14,7 @@
 
     <modules>
         <module>katabasis-core</module>
+        <module>katabasis-storage-json</module>
         <module>katabasis-cli</module>
         <module>katabasis-ui</module>
     </modules>

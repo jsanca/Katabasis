@@ -59,6 +59,18 @@ class HttpDownloadOrchestratorTest {
      *       on HEAD; the {@code HttpClient} will throw an {@code IOException}.</li>
      * </ul>
      */
+    /**
+     * HTTP/1.1 server that handles HEAD, GET, and range GET requests.
+     *
+     * <ul>
+     *   <li>{@code acceptsRanges} — controls {@code Accept-Ranges: bytes} in HEAD responses.</li>
+     *   <li>{@code etag} — when non-null, included in HEAD and partial responses; enables
+     *       the range capability probe to succeed and the orchestrator to select segmented mode.</li>
+     *   <li>{@code rangeRequestsOnly} — when {@code true}, rejects full GET requests with 400;
+     *       used to prove the segmented path was taken.</li>
+     *   <li>{@code failHeadRequest} — when {@code true}, closes the connection on HEAD.</li>
+     * </ul>
+     */
     private static final class TestHttpServer implements AutoCloseable {
 
         private final ServerSocket serverSocket;
@@ -66,6 +78,7 @@ class HttpDownloadOrchestratorTest {
         volatile boolean acceptsRanges = true;
         volatile boolean rangeRequestsOnly = false;
         volatile boolean failHeadRequest = false;
+        volatile String etag = null;
         private volatile boolean closed = false;
 
         TestHttpServer(final byte[] content) throws IOException {
@@ -134,6 +147,7 @@ class HttpDownloadOrchestratorTest {
             final StringBuilder sb = new StringBuilder("HTTP/1.1 200 OK\r\n");
             sb.append("Content-Length: ").append(content.length).append("\r\n");
             if (acceptsRanges) { sb.append("Accept-Ranges: bytes\r\n"); }
+            if (etag != null)   { sb.append("ETag: ").append(etag).append("\r\n"); }
             sb.append("Connection: close\r\n\r\n");
             out.write(sb.toString().getBytes(StandardCharsets.US_ASCII));
         }
@@ -141,11 +155,13 @@ class HttpDownloadOrchestratorTest {
         private void writePartialResponse(final OutputStream out,
                                            final long start, final long end) throws IOException {
             final long len = end - start + 1;
-            final String headers = "HTTP/1.1 206 Partial Content\r\n" +
-                    "Content-Length: " + len + "\r\n" +
-                    "Content-Range: bytes " + start + "-" + end + "/" + content.length + "\r\n" +
-                    "Connection: close\r\n\r\n";
-            out.write(headers.getBytes(StandardCharsets.US_ASCII));
+            final StringBuilder sb = new StringBuilder("HTTP/1.1 206 Partial Content\r\n");
+            sb.append("Content-Length: ").append(len).append("\r\n");
+            sb.append("Content-Range: bytes ").append(start).append('-').append(end)
+              .append('/').append(content.length).append("\r\n");
+            if (etag != null) { sb.append("ETag: ").append(etag).append("\r\n"); }
+            sb.append("Connection: close\r\n\r\n");
+            out.write(sb.toString().getBytes(StandardCharsets.US_ASCII));
             out.write(content, (int) start, (int) len);
         }
 
@@ -193,6 +209,7 @@ class HttpDownloadOrchestratorTest {
 
         try (TestHttpServer server = new TestHttpServer(content)) {
             server.acceptsRanges = true;
+            server.etag = "\"test-etag-v1\""; // strong ETag required for range capability probe
             // rangeRequestsOnly ensures a full GET would fail → proves segmented path was taken
             server.rangeRequestsOnly = true;
 
