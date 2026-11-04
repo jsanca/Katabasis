@@ -3,6 +3,8 @@
 **Last verified:** 2026-11-03  
 **Evidence source:** [KATABASIS-ROADMAP-001 planning report](../../engineering/agents/reports/KATABASIS-ROADMAP-001-roadmap-planning.md)
 
+**Visual models:** [Module map](module-map.md) · [Class model](class-model.md) · [Download lifecycle](../flows/download-lifecycle.md)
+
 ---
 
 ## Module Layout
@@ -131,8 +133,9 @@ All public data types are Java records with compact constructors validating null
 | `DownloadInfo` | Immutable download identity: id, sourceUri, targetPath |
 | `DownloadSubmissionResult` | Returned by `download()`; carries download ID |
 | `DownloadTaskSnapshot` | Point-in-time immutable view of task state |
-| `DownloadProgress` | Downloaded bytes + total bytes |
 | `DownloadControlResult` | Returned by cancel/pause/resume; carries action, status, snapshot |
+
+`DownloadProgress` exists in `api.model` as an empty placeholder class and is not used; progress values are carried by `DownloadProgressEvent`.
 
 ---
 

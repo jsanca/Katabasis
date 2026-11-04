@@ -12,6 +12,9 @@ Only durable artifacts are indexed. Interactions that left no durable artifact a
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | KATABASIS-ROADMAP-001 | Consolidación y planificación multiprotocolo | DONE | — | [task](agents/tasks/KATABASIS-ROADMAP-001.md) | [report](agents/reports/KATABASIS-ROADMAP-001-roadmap-planning.md) | — | — | [architecture](../knowledge/architecture/katabasis-core.md) |
 | K-0.1-T01 | Fix pause/resume event storm in segmented downloads | DONE | KATABASIS-ROADMAP-001 | [task](agents/tasks/K-0.1-T01.md) | [report](agents/reports/K-0.1-T01-pause-resume-fix.md) | — | — | — |
+| K-DOC-001 | Reconcile project documentation with current code state | DONE | — | [task](agents/tasks/K-DOC-001.md) | [report](agents/reports/K-DOC-001-documentation-reconciliation.md) | — | — | — |
+| K-DOC-002 | Extract canonical agent guidance into AGENTS-CORE.md | DONE | K-DOC-001 | [task](agents/tasks/K-DOC-002.md) | [report](agents/reports/K-DOC-002-agents-core-extraction.md) | — | — | — |
+| K-DOC-003 | Add module, class, and sequence diagrams for the core download flow | DONE | K-DOC-001 | [task](agents/tasks/K-DOC-003.md) | [report](agents/reports/K-DOC-003-diagrams.md) | — | — | [architecture](../knowledge/architecture/katabasis-core.md) |
 
 ## Maintenance
 

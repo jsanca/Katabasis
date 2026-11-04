@@ -66,7 +66,9 @@ docs/
   roadmap/          Committed direction and future ideas
   adr/              Architecture Decision Records
 .osk/               OSK roles and skills installation
-CLAUDE.md           Claude Code project instructions
+AGENTS-CORE.md      Canonical shared agent guidance (build, architecture, conventions)
+AGENTS.md           Codex adapter — references AGENTS-CORE.md
+CLAUDE.md           Claude Code adapter — imports AGENTS-CORE.md
 ```
 
 ## Getting Started

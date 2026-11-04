@@ -24,12 +24,12 @@ Katabasis is not just a downloader — it is an exploration of **clean architect
 - **Cooperative concurrency**
 - **Extensibility by design**
 
-The system is intentionally structured to evolve into more advanced capabilities such as:
+The system was intentionally structured to evolve into more advanced capabilities. Some are already delivered; others remain on the roadmap:
 
-- cancellation and pause/resume
-- segmented (parallel) downloads
-- pluggable protocols (HTTP, FTP, S3, etc.)
-- persistence and recovery
+- cancellation and pause/resume — delivered
+- segmented (parallel) downloads — delivered
+- pluggable protocols — HTTP today; FTP and S3 on the roadmap
+- persistence and recovery — on the roadmap
 
 ---
 
@@ -58,12 +58,14 @@ Handles concurrency.
 ### `DownloadStrategy`
 Encapsulates *how* a download is performed.
 
-Current implementation:
-- `HttpDownloadStrategy` (using JDK `HttpClient`)
+Current implementations:
+- `HttpDownloadStrategy` — single-stream HTTP/HTTPS via JDK `HttpClient`
+- `SegmentedHttpDownloadStrategy` — parallel byte-range chunks via `StructuredTaskScope`
+- `HttpDownloadOrchestrator` — probes `Accept-Ranges` and picks single-stream or segmented
 
 Future:
-- FTP
-- S3
+- FTP/FTPS
+- S3 (only an empty stub class exists today)
 - custom protocols
 
 ---
@@ -74,13 +76,15 @@ Decides *which* strategy to use based on the request (e.g., URI scheme).
 ---
 
 ### `DownloadTask`
-Represents a live download in the system.
+Internal mutable representation of a live download.
 
 Tracks:
 - status
 - progress
 - timestamps
-- cancellation state
+- cancellation and pause state
+
+Never exposed publicly — callers receive an immutable `DownloadTaskSnapshot`.
 
 ---
 
@@ -89,7 +93,7 @@ In-memory registry of active downloads.
 
 Enables:
 - lookup by ID
-- control operations (cancel, future pause/resume)
+- control operations (cancel, pause, resume)
 - snapshot queries
 
 ---
@@ -100,8 +104,11 @@ Event-driven communication layer.
 Examples:
 - `DownloadStartedEvent`
 - `DownloadProgressEvent`
+- `DownloadPausedEvent`
+- `DownloadResumedEvent`
 - `DownloadCompletedEvent`
 - `DownloadFailedEvent`
+- `DownloadCancelledEvent`
 
 ---
 
@@ -117,10 +124,11 @@ Katabasis leverages **virtual threads** to simplify concurrency:
 
 ## 🚀 Current Features
 
-- HTTP downloads using JDK `HttpClient`
-- progress tracking
-- event emission
-- configurable concurrency
+- HTTP/HTTPS downloads using JDK `HttpClient`
+- single-stream and segmented (parallel byte-range) downloads, auto-selected per server support
+- progress tracking and event emission
+- cooperative cancel, pause, and resume
+- configurable concurrency and segment count
 - modular architecture (strategy + resolver)
 - thread-safe execution model
 
@@ -128,12 +136,12 @@ Katabasis leverages **virtual threads** to simplify concurrency:
 
 ## 🔜 Planned Features
 
-- cancel download (in progress)
-- pause/resume (with HTTP range support)
-- segmented downloads (parallel chunks)
+- functional retry policies (`RetryPolicy` is currently an empty interface)
 - checksum validation
-- CLI interface
-- persistent registry (filesystem / database)
+- CLI interface (`katabasis-cli` exists only as a stub)
+- persistent registry and recovery (`DownloadStateStore` is a placeholder)
+- FTP/FTPS and S3 protocol support
+- BitTorrent support, pending a feasibility gate
 
 ---
 
@@ -144,10 +152,12 @@ DownloadManager manager = DownloadManagers.createDefault();
 
 manager.addListener(System.out::println);
 
-manager.submit(new DownloadRequest(
+DownloadSubmissionResult result = manager.download(new DownloadRequest(
     URI.create("https://example.com/file.pdf"),
     Path.of("./file.pdf")
 ));
+
+System.out.println("Download id: " + result.downloadId());
 ```
 
 

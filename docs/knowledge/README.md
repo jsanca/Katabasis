@@ -4,6 +4,11 @@
 
 Store durable, current understanding of what the project is, how its domain works, and the concepts needed to change it safely. This is an entry point, not an exhaustive index: navigate from this root to a relevant area, then to the concept and its authority or evidence.
 
+## Areas
+
+- [architecture/](architecture/) — module boundaries, components, and the class model.
+- [flows/](flows/) — cross-cutting runtime sequences such as the download lifecycle.
+
 ## Navigation and ownership
 
 - Start with this file, then read the relevant area README when one exists.
