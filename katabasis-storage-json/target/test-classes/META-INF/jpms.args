@@ -1,6 +1,0 @@
---add-reads
-jsanca.katabasis.storage.json=ALL-UNNAMED
---patch-module
-jsanca.katabasis.storage.json=_
---add-reads
-jsanca.katabasis.storage.json=ALL-UNNAMED

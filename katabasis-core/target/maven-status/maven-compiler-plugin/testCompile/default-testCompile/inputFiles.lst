@@ -1,6 +1,0 @@
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/execution/DownloadExecutorsTest.java
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/http/HttpDownloadOrchestratorTest.java
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/http/HttpDownloadSupportTest.java
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/http/HttpRangeSupportTest.java
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/http/SegmentedHttpDownloadStrategyTest.java
-/Users/jonathan/code/Katabasis/katabasis-core/src/test/java/jsanca/katabasis/core/internal/util/FileNameResolverTest.java

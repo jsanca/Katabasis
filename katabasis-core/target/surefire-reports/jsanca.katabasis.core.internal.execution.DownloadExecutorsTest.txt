@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: jsanca.katabasis.core.internal.execution.DownloadExecutorsTest
--------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.614 s -- in jsanca.katabasis.core.internal.execution.DownloadExecutorsTest
