@@ -7,7 +7,7 @@ import java.time.Instant;
 
 /**
  * Event emitted when a paused download is resumed and continues execution.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadResumedEvent(
         DownloadInfo info,

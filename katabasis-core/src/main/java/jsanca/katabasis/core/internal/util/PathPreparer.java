@@ -15,7 +15,7 @@ import java.util.Objects;
  * the download starts. It does not create the target file itself.
  *
  * <p>This class is stateless and thread-safe.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class PathPreparer {
 

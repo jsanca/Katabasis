@@ -4,6 +4,7 @@ package jsanca.katabasis.core.api.model;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Public request model that describes a download operation.
@@ -15,22 +16,27 @@ import java.util.Objects;
  * <p>A builder is provided to keep call sites readable and to make the record easy
  * to evolve in the future if more optional fields are added.
  *
- * @param sourceUri the source URI to download from
- * @param targetPath the target file path where the download should be written
- * @author jsanca & elo
+ * @param sourceUri   the source URI to download from
+ * @param targetPath  the target file path where the download should be written
+ * @param retryConfig per-request retry override; when present, supersedes the global
+ *                    {@link DownloadConfig#retryConfig()}
+ * @author jsanca &amp; elo
  */
-public record DownloadRequest(URI sourceUri, Path targetPath) {
+public record DownloadRequest(URI sourceUri, Path targetPath, Optional<RetryConfig> retryConfig) {
 
     /**
      * Creates a new download request after validating required fields.
      *
-     * @param sourceUri the source URI to download from
-     * @param targetPath the target file path where the download should be written
+     * @param sourceUri   the source URI to download from
+     * @param targetPath  the target file path where the download should be written
+     * @param retryConfig per-request retry override; {@code Optional.empty()} defers to
+     *                    the global configuration
      * @throws NullPointerException if any required field is {@code null}
      */
     public DownloadRequest {
         Objects.requireNonNull(sourceUri, "sourceUri must not be null");
         Objects.requireNonNull(targetPath, "targetPath must not be null");
+        Objects.requireNonNull(retryConfig, "retryConfig must not be null");
     }
 
     /**
@@ -49,6 +55,7 @@ public record DownloadRequest(URI sourceUri, Path targetPath) {
 
         private URI sourceUri;
         private Path targetPath;
+        private RetryConfig retryConfig;
 
         private Builder() {
         }
@@ -59,7 +66,7 @@ public record DownloadRequest(URI sourceUri, Path targetPath) {
          * @param sourceUri the source URI
          * @return this builder instance
          */
-        public Builder sourceUri(URI sourceUri) {
+        public Builder sourceUri(final URI sourceUri) {
             this.sourceUri = sourceUri;
             return this;
         }
@@ -70,8 +77,19 @@ public record DownloadRequest(URI sourceUri, Path targetPath) {
          * @param targetPath the destination path
          * @return this builder instance
          */
-        public Builder targetPath(Path targetPath) {
+        public Builder targetPath(final Path targetPath) {
             this.targetPath = targetPath;
+            return this;
+        }
+
+        /**
+         * Sets a per-request retry configuration that overrides the global setting.
+         *
+         * @param retryConfig the override; {@code null} means defer to global config
+         * @return this builder instance
+         */
+        public Builder retryConfig(final RetryConfig retryConfig) {
+            this.retryConfig = retryConfig;
             return this;
         }
 
@@ -82,7 +100,7 @@ public record DownloadRequest(URI sourceUri, Path targetPath) {
          * @throws NullPointerException if any required field is missing
          */
         public DownloadRequest build() {
-            return new DownloadRequest(sourceUri, targetPath);
+            return new DownloadRequest(sourceUri, targetPath, Optional.ofNullable(retryConfig));
         }
     }
 }

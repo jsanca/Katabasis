@@ -7,7 +7,7 @@ import java.time.Instant;
 
 /**
  * Event emitted when a download enters a paused state.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadPausedEvent(
         DownloadInfo info,

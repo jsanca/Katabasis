@@ -30,6 +30,32 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- JSON-B + JSON-P + Yasson + Parsson — test-only, K-0.1-T03A compatibility spike -->
+        <dependency>
+            <groupId>jakarta.json.bind</groupId>
+            <artifactId>jakarta.json.bind-api</artifactId>
+            <version>3.0.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.json</groupId>
+            <artifactId>jakarta.json-api</artifactId>
+            <version>2.1.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.yasson</groupId>
+            <artifactId>yasson</artifactId>
+            <version>3.0.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.parsson</groupId>
+            <artifactId>parsson</artifactId>
+            <version>1.1.7</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -56,18 +82,40 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <release>${maven.compiler.release}</release>
-                    <compilerArgs>
-                        <arg>--enable-preview</arg>
-                    </compilerArgs>
-                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <release>${maven.compiler.release}</release>
+                            <compilerArgs>
+                                <arg>--enable-preview</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <goals><goal>testCompile</goal></goals>
+                        <configuration>
+                            <release>${maven.compiler.release}</release>
+                            <compilerArgs>
+                                <arg>--enable-preview</arg>
+                                <arg>--add-reads</arg>
+                                <arg>jsanca.katabasis.core=jakarta.json.bind</arg>
+                                <arg>--add-reads</arg>
+                                <arg>jsanca.katabasis.core=jakarta.json</arg>
+                                <arg>--add-reads</arg>
+                                <arg>jsanca.katabasis.core=org.eclipse.yasson</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>--enable-preview</argLine>
+                    <argLine>--enable-preview --add-reads jsanca.katabasis.core=jakarta.json.bind --add-reads jsanca.katabasis.core=jakarta.json --add-reads jsanca.katabasis.core=org.eclipse.yasson --add-opens jsanca.katabasis.core/jsanca.katabasis.core.internal.json=org.eclipse.yasson</argLine>
                 </configuration>
             </plugin>
         </plugins>

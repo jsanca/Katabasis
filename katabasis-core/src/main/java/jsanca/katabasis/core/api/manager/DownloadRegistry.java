@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * primarily keyed by download identifier. It acts as the bridge between public
  * control operations (such as cancel) and the internal mutable runtime state
  * stored in {@link DownloadTask} instances.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class DownloadRegistry {
 

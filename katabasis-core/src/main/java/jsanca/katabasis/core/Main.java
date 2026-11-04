@@ -11,10 +11,18 @@ import java.nio.file.Path;
 
 /**
  * Simple entry point to test the DownloadManager.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public class Main {
 
+    /**
+     * Runs a single download from the command line.
+     *
+     * <p>Usage: {@code java Main <url> <targetPath>}. The process stays alive
+     * for ten seconds after submission so the asynchronous download can finish.
+     *
+     * @param args the source URL and the local target path
+     */
     public static void main(String[] args) {
         if (args.length < 2) {
             System.err.println("Usage: java Main <url> <targetPath>");
@@ -27,10 +35,10 @@ public class Main {
 
         manager.addListener(System.out::println);
 
-        final DownloadRequest request = new DownloadRequest(
-                URI.create(urlToDownload),
-                Path.of(localPathToDownload)
-        );
+        final DownloadRequest request = DownloadRequest.builder()
+                .sourceUri(URI.create(urlToDownload))
+                .targetPath(Path.of(localPathToDownload))
+                .build();
 
         final DownloadSubmissionResult result = manager.download(request);
         System.out.println("Result: " + result);

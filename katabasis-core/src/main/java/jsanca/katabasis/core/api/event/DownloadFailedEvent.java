@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  * <p>This event exposes failure details together with timing information so that
  * clients can log, retry, or present meaningful feedback to users.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadFailedEvent(
         DownloadInfo info,

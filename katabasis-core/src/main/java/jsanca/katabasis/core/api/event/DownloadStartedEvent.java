@@ -11,7 +11,7 @@ import java.util.Objects;
  *
  * <p>This event marks the beginning of the download lifecycle and allows clients
  * to initialize UI state, logging, or tracking mechanisms.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadStartedEvent(
         DownloadInfo info,

@@ -15,7 +15,7 @@ import java.util.Objects;
  * <p>This event exposes the final file location together with useful completion metadata
  * such as the total downloaded size, an optional checksum, and the total duration of the
  * download operation.
- * @author jsnca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadCompletedEvent(
         DownloadInfo info,

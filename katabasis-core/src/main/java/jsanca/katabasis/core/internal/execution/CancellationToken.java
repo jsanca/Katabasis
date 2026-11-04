@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>This token allows one component to request cancellation while another
  * component periodically checks whether cancellation has been requested.
  * It is intentionally lightweight and thread-safe.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class CancellationToken {
 

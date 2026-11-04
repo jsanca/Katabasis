@@ -7,7 +7,7 @@ import java.time.Instant;
  *
  * <p>This is a read-only view exposed to API consumers, decoupled from the
  * internal mutable DownloadTask.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadTaskSnapshot(
         DownloadInfo info,

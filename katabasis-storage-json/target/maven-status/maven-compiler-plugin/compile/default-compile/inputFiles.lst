@@ -1,0 +1,13 @@
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/CheckpointCoordinator.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/CodecException.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/DownloadStateStores.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/StorageDocument.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/StorageKey.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/api/VersionedCodec.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/adapter/PathAdapter.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/adapter/UriAdapter.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/codec/JsonEnvelopeCodec.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/migration/Migration.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/migration/MigrationRegistry.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/jsanca/katabasis/storage/json/internal/store/FileDownloadStateStore.java
+/Users/jonathan/code/Katabasis/katabasis-storage-json/src/main/java/module-info.java

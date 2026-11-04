@@ -10,7 +10,7 @@ import java.util.UUID;
  *
  * <p>This class is stateless and thread-safe because it delegates identifier creation
  * to {@link UUID#randomUUID()}.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class DownloadIdGenerator {
 

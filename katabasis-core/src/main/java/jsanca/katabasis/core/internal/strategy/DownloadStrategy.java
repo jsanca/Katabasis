@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  *
  * <p>Implementations are expected to emit lifecycle events through the provided
  * {@link Consumer}, including start, progress, completion, and failure.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public interface DownloadStrategy {
 

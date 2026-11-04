@@ -5,7 +5,7 @@ package jsanca.katabasis.core.api.model;
  *
  * <p>This enum is part of the public API and is intended to be used by clients
  * to understand and react to the current state of a download operation.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public enum DownloadStatus {
 
@@ -39,10 +39,20 @@ public enum DownloadStatus {
      */
     CANCELLED;
 
+    /**
+     * Returns whether this status is terminal.
+     *
+     * @return {@code true} for {@code COMPLETED}, {@code FAILED}, or {@code CANCELLED}
+     */
     public boolean isTerminal() {
         return this == COMPLETED || this == FAILED || this == CANCELLED;
     }
 
+    /**
+     * Returns whether this status represents an active transfer.
+     *
+     * @return {@code true} only for {@code IN_PROGRESS}
+     */
     public boolean isActive() {
         return this == IN_PROGRESS;
     }

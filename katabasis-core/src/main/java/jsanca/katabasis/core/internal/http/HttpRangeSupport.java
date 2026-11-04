@@ -18,7 +18,7 @@ import static jsanca.katabasis.core.internal.util.Preconditions.*;
  *
  * <p>Provides server capability probing, range-request construction, and
  * file-to-chunk splitting logic. All methods are stateless and thread-safe.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class HttpRangeSupport {
 

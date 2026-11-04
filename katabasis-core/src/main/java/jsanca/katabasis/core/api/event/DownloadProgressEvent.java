@@ -11,7 +11,7 @@ import java.util.Objects;
  *
  * <p>This event provides incremental progress information including the number of bytes
  * downloaded so far and the total expected size (when known).
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadProgressEvent(
         DownloadInfo info,

@@ -26,10 +26,10 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 | Task ID | Description | Depends On | ADR Required |
 | --- | --- | --- | --- |
 | ~~K-0.1-T01~~ | ~~Verify and test pause/resume in segmented downloads; resolve event-storm risk (see R-001)~~ **DONE** | — | — |
-| K-0.1-T02 | Write end-to-end tests for `DownloadManager` (submit, complete, fail, cancel, pause/resume lifecycle) | — | — |
-| K-0.1-T03 | Design `RetryPolicy` API: add methods defining retry contract (exception, attempt count, delay) | — | ADR-001 |
-| K-0.1-T04 | Integrate retry into `HttpDownloadStrategy` | K-0.1-T03 | — |
-| K-0.1-T05 | Integrate retry into `SegmentedHttpDownloadStrategy` | K-0.1-T03 | — |
+| ~~K-0.1-T02~~ | ~~Write end-to-end tests for `DownloadManager` (submit, complete, fail, cancel, pause/resume lifecycle)~~ **DONE** | — | — |
+| ~~K-0.1-T03~~ | ~~Design `RetryPolicy` API: add methods defining retry contract (exception, attempt count, delay)~~ **DONE** (implemented as K-0.1-T03A–D; `RetryConfig`, `RetryPolicy`, `RetryExecutor`, `HttpFailureClassifier`) | — | ADR-001 |
+| ~~K-0.1-T04~~ | ~~Integrate retry into `HttpDownloadStrategy`~~ **DONE** (K-0.1-T03D + K-RETRY-HARDEN-001) | K-0.1-T03 | — |
+| ~~K-0.1-T05~~ | ~~Integrate retry into `SegmentedHttpDownloadStrategy`~~ **DONE** (K-0.1-T03D + K-RETRY-HARDEN-001) | K-0.1-T03 | — |
 | K-0.1-T06 | Add timeout configuration and handling to HTTP strategies | K-0.1-T04 | — |
 | K-0.1-T07 | Validate `ETag` / `If-Range` headers in segmented strategy for content integrity | — | — |
 | K-0.1-T08 | Resource cleanup tests: verify no file handle or partial file leaks on cancellation/failure | K-0.1-T01 | — |
@@ -38,13 +38,13 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 
 ### Definition of Done — 0.1
 
-- [ ] All existing tests pass (no regressions)
-- [ ] `DownloadManager` end-to-end tests exist and pass for: single download completes, download fails, download is cancelled, download is paused then resumed
-- [ ] Retry fires for transient HTTP errors (5xx, connection reset) using `FixedDelayRetryPolicy` and `ExponentialBackoffRetryPolicy`
-- [ ] Segmented pause/resume emits exactly one `DownloadPausedEvent` and one `DownloadResumedEvent` per pause/resume signal
-- [ ] No partial files or open file handles remain after cancellation or failure
-- [ ] ETag/If-Range mismatch is detected and raises `DownloadFailedEvent` with appropriate error code
-- [ ] `HttpDownloadOrchestratorTest` and `HttpDownloadSupportTest` coverage is known and not empty
+- [x] All existing tests pass (no regressions) — 90 katabasis-core + 63 katabasis-storage-json (2026-11-04)
+- [x] `DownloadManager` end-to-end tests exist and pass for: single download completes, download fails, download is cancelled, download is paused then resumed — K-0.1-T02
+- [x] Retry fires for transient HTTP errors (5xx, connection reset) using `FixedDelayRetryPolicy` and `ExponentialBackoffRetryPolicy` — K-0.1-T03D + K-RETRY-HARDEN-001
+- [x] Segmented pause/resume emits exactly one `DownloadPausedEvent` and one `DownloadResumedEvent` per pause/resume signal — K-0.1-T01
+- [ ] No partial files or open file handles remain after cancellation or failure — K-0.1-T08
+- [ ] ETag/If-Range mismatch is detected and raises `DownloadFailedEvent` with appropriate error code — K-0.1-T07
+- [ ] `HttpDownloadOrchestratorTest` and `HttpDownloadSupportTest` coverage is known and not empty — K-0.1-T09
 
 ---
 

@@ -15,7 +15,7 @@ package jsanca.katabasis.core.api.model;
  * @param status the outcome of the control operation
  * @param message optional human-readable message providing additional context
  * @param snapshot optional snapshot of the download state after the operation
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadControlResult(
         String downloadId,

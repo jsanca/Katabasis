@@ -13,7 +13,7 @@ import java.nio.file.Path;
  * @param downloadId the unique identifier of the download
  * @param sourceUri the source URI being downloaded
  * @param targetPath the target file path where the download is written
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadInfo(String downloadId, URI sourceUri, Path targetPath) {
 

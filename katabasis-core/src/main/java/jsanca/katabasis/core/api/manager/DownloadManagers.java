@@ -5,6 +5,7 @@ import jsanca.katabasis.core.api.event.DownloadEvent;
 import jsanca.katabasis.core.api.event.DownloadFailedEvent;
 import jsanca.katabasis.core.api.event.DownloadStartedEvent;
 import jsanca.katabasis.core.api.model.*;
+import jsanca.katabasis.core.api.model.RetryConfig;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.DownloadExecutor;
 import jsanca.katabasis.core.internal.execution.DownloadExecutors;
@@ -95,9 +96,12 @@ public final class DownloadManagers {
 
             log.debug("Submitting download: {}", request);
 
+            final RetryConfig effectiveRetry = request.retryConfig()
+                    .orElse(config.retryConfig());
+
             final Instant createdAt = Instant.now();
             this.downloadRegistry.register(task);
-            this.executor.execute(() -> runDownload(task));
+            this.executor.execute(() -> runDownload(task, effectiveRetry));
 
             return new DownloadSubmissionResult(downloadId, DownloadStatus.PENDING, createdAt);
         }
@@ -115,7 +119,7 @@ public final class DownloadManagers {
             this.listeners.remove(listener);
         }
 
-        private void runDownload(final DownloadTask task) {
+        private void runDownload(final DownloadTask task, final RetryConfig retryConfig) {
 
             Objects.requireNonNull(task, "task must not be null");
             log.debug("Starting download: {}", task);
@@ -129,7 +133,9 @@ public final class DownloadManagers {
                 final DownloadStrategy strategy = this.strategyResolver.resolve(info);
                 log.debug("Resolved strategy {} for {}", strategy.getClass().getSimpleName(), info.downloadId());
 
-                strategy.download(task, new DownloadExecutionContext(this.pauseCoordinator), this::emit);
+                strategy.download(task,
+                        new DownloadExecutionContext(this.pauseCoordinator, retryConfig),
+                        this::emit);
             } catch (Exception e) {
 
                 final Duration duration = Duration.between(occurredAt, Instant.now());

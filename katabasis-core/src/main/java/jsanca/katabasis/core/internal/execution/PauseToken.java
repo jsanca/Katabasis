@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * effect as calling it once.
  * </p>
  *
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class PauseToken {
 

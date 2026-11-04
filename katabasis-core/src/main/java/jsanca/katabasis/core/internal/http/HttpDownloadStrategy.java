@@ -7,6 +7,7 @@ import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.PauseCoordinator;
 import jsanca.katabasis.core.internal.execution.PauseListener;
 import jsanca.katabasis.core.internal.model.DownloadTask;
+import jsanca.katabasis.core.internal.retry.RetryExecutor;
 import jsanca.katabasis.core.internal.strategy.DownloadStrategy;
 import jsanca.katabasis.core.internal.util.PathPreparer;
 import org.slf4j.Logger;
@@ -31,7 +32,7 @@ import java.util.function.Consumer;
  * <p>This strategy performs a blocking stream download and emits progress, completion,
  * and failure events through the provided emitter. It is designed to be executed by the
  * downloader execution layer, which may run it on virtual threads.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class HttpDownloadStrategy implements DownloadStrategy {
 
@@ -71,44 +72,52 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
         DownloadStrategy.validate(task, context, emitter);
 
         final DownloadInfo info = task.info();
-
         final Instant startedAt = Instant.now();
         log.debug("Starting HTTP download for {} from {}", info.downloadId(), info.sourceUri());
 
         final PauseCoordinator pauseCoordinator = context.pauseCoordinator();
+        final RetryExecutor retryExecutor = context.retryExecutorFor(HttpFailureClassifier.INSTANCE);
 
         try {
-
-            PathPreparer.prepareParentDirectory(info.targetPath());
-
-            final HttpResponse<InputStream> response = doGet(info);
-            final int statusCode = response.statusCode();
-
-            if (isInvalidResponseStatus(statusCode)) {
-
-                throw new jsanca.katabasis.core.internal.exception.HttpDownloadStatusException(info, statusCode);
-            }
-
-            final long totalBytes = response.headers()
-                    .firstValueAsLong("Content-Length")
-                    .orElse(0L);
-
-            log.debug("HTTP response OK for {}. contentLength={}", info.downloadId(), totalBytes);
-
-            try (InputStream inputStream = response.body();
-                 OutputStream outputStream = Files.newOutputStream(info.targetPath())) {
-
-                final long downloadedBytes = doDownload(task, inputStream, outputStream,
-                        totalBytes, pauseCoordinator, emitter);
-                outputStream.flush();
-                HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
-            }
+            retryExecutor.execute(
+                    () -> doDownloadAttempt(task, pauseCoordinator, emitter, startedAt),
+                    task::isCancellationRequested);
         } catch (DownloadCancelledException e) {
-
             HttpDownloadSupport.onCancelled(info, emitter, e);
         } catch (Exception e) {
-
             HttpDownloadSupport.onError(info, emitter, e, startedAt);
+        }
+    }
+
+    private void doDownloadAttempt(final DownloadTask task,
+                                    final PauseCoordinator pauseCoordinator,
+                                    final Consumer<DownloadEvent> emitter,
+                                    final Instant startedAt) throws Exception {
+
+        final DownloadInfo info = task.info();
+
+        PathPreparer.prepareParentDirectory(info.targetPath());
+
+        final HttpResponse<InputStream> response = doGet(info);
+        final int statusCode = response.statusCode();
+
+        if (isInvalidResponseStatus(statusCode)) {
+            throw new jsanca.katabasis.core.internal.exception.HttpDownloadStatusException(info, statusCode);
+        }
+
+        final long totalBytes = response.headers()
+                .firstValueAsLong("Content-Length")
+                .orElse(0L);
+
+        log.debug("HTTP response OK for {}. contentLength={}", info.downloadId(), totalBytes);
+
+        try (InputStream inputStream = response.body();
+             OutputStream outputStream = Files.newOutputStream(info.targetPath())) {
+
+            final long downloadedBytes = doDownload(task, inputStream, outputStream,
+                    totalBytes, pauseCoordinator, emitter);
+            outputStream.flush();
+            HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
         }
     }
 
@@ -175,7 +184,9 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                         this.pausedAt = Instant.now();
                         log.info("HTTP download paused for {} at {}/{} bytes",
                                 info.downloadId(), downloadedBytes.get(), totalBytes);
-                        HttpDownloadStrategy.this.onPaused(info, emitter, downloadedBytes.get(), totalBytes, this.pausedAt);
+                        emitter.accept(new DownloadPausedEvent(
+                                info, downloadedBytes.get(), totalBytes,
+                                this.pausedAt.truncatedTo(ChronoUnit.MILLIS)));
                     }
 
                     @Override
@@ -184,40 +195,13 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                         final long pauseDuration = this.pausedAt != null
                                 ? java.time.Duration.between(this.pausedAt, resumedAt).toMillis()
                                 : 0L;
-
                         log.info("HTTP download resumed for {} after {} ms pause",
                                 info.downloadId(), pauseDuration);
-                        HttpDownloadStrategy.this.onResumed(info, emitter, downloadedBytes.get(), totalBytes, resumedAt);
+                        emitter.accept(new DownloadResumedEvent(
+                                info, downloadedBytes.get(), totalBytes,
+                                resumedAt.truncatedTo(ChronoUnit.MILLIS)));
                     }
                 });
-    }
-
-    private void onPaused(final DownloadInfo info,
-                          final Consumer<DownloadEvent> emitter,
-                          final long downloadedBytes,
-                          final long totalBytes,
-                          final Instant pausedAt) {
-
-        emitter.accept(new DownloadPausedEvent(
-                info,
-                downloadedBytes,
-                totalBytes,
-                pausedAt.truncatedTo(ChronoUnit.MILLIS)
-        ));
-    }
-
-    private void onResumed(final DownloadInfo info,
-                           final Consumer<DownloadEvent> emitter,
-                           final long downloadedBytes,
-                           final long totalBytes,
-                           final Instant resumedAt) {
-
-        emitter.accept(new DownloadResumedEvent(
-                info,
-                downloadedBytes,
-                totalBytes,
-                resumedAt.truncatedTo(ChronoUnit.MILLIS)
-        ));
     }
 
     private static boolean isInvalidResponseStatus(final int statusCode) {

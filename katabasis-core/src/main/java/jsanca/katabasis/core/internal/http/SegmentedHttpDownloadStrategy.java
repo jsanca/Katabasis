@@ -8,6 +8,7 @@ import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.PauseCoordinator;
 import jsanca.katabasis.core.internal.execution.PauseListener;
 import jsanca.katabasis.core.internal.model.DownloadTask;
+import jsanca.katabasis.core.internal.retry.RetryExecutor;
 import jsanca.katabasis.core.internal.strategy.DownloadStrategy;
 import jsanca.katabasis.core.internal.util.ByteSize;
 import jsanca.katabasis.core.internal.util.PathPreparer;
@@ -119,10 +120,13 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                 final AtomicBoolean pausedFired  = new AtomicBoolean(false);
                 final AtomicBoolean resumedFired = new AtomicBoolean(false);
 
+                final RetryExecutor retryExecutor = context.retryExecutorFor(HttpFailureClassifier.INSTANCE);
+
                 try (var scope = StructuredTaskScope.open(Joiner.<Void>awaitAllSuccessfulOrThrow())) {
                     for (final HttpRangeSupport.ChunkRange chunk : chunks) {
                         scope.fork(() -> downloadChunk(chunk, channel, task,
-                                totalDownloaded, context, emitter, pausedFired, resumedFired));
+                                totalDownloaded, context, emitter, pausedFired, resumedFired,
+                                retryExecutor));
                     }
                     scope.join();
                 }
@@ -156,8 +160,33 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                                 final DownloadExecutionContext context,
                                 final Consumer<DownloadEvent> emitter,
                                 final AtomicBoolean pausedFired,
-                                final AtomicBoolean resumedFired)
+                                final AtomicBoolean resumedFired,
+                                final RetryExecutor retryExecutor)
             throws IOException, InterruptedException {
+
+        try {
+            retryExecutor.execute(
+                    () -> doChunkAttempt(chunk, channel, task, totalDownloaded, context, emitter,
+                            pausedFired, resumedFired),
+                    task::isCancellationRequested);
+        } catch (DownloadCancelledException e) {
+            throw e;
+        } catch (IOException | InterruptedException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Chunk " + chunk.index() + " failed: " + e.getMessage(), e);
+        }
+        return null;
+    }
+
+    private void doChunkAttempt(final HttpRangeSupport.ChunkRange chunk,
+                                 final FileChannel channel,
+                                 final DownloadTask task,
+                                 final AtomicLong totalDownloaded,
+                                 final DownloadExecutionContext context,
+                                 final Consumer<DownloadEvent> emitter,
+                                 final AtomicBoolean pausedFired,
+                                 final AtomicBoolean resumedFired) throws IOException, InterruptedException {
 
         final DownloadInfo info = task.info();
 
@@ -176,6 +205,8 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
         final byte[] buffer = new byte[bufferSize];
         long position = chunk.start();
         int bytesRead;
+        // Track bytes transferred in this attempt so we can rewind on failure.
+        long attemptBytes = 0;
 
         try (InputStream inputStream = response.body()) {
             while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -186,6 +217,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
 
                 channel.write(ByteBuffer.wrap(buffer, 0, bytesRead), position);
                 position += bytesRead;
+                attemptBytes += bytesRead;
 
                 final long newTotal = totalDownloaded.addAndGet(bytesRead);
                 emitter.accept(new DownloadProgressEvent(info, newTotal, contentLength, Instant.now()));
@@ -197,11 +229,17 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                     HttpDownloadSupport.throwCancelled(info, totalDownloaded, contentLength);
                 }
             }
+        } catch (final DownloadCancelledException e) {
+            // Cancellation is terminal — do not rewind; the cancelled event uses totalDownloaded.
+            throw e;
+        } catch (final Exception e) {
+            // Rewind phantom bytes so progress does not exceed contentLength on retry.
+            totalDownloaded.addAndGet(-attemptBytes);
+            throw e;
         }
 
         log.debug("Chunk {} [{}-{}] completed for {}",
                 chunk.index(), chunk.start(), chunk.end(), info.downloadId());
-        return null;
     }
 
     private void handlePauseRequest(final DownloadTask task,

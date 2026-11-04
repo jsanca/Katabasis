@@ -14,7 +14,7 @@ import java.time.Instant;
  *
  * <p>All event types should carry enough shared metadata to allow correlation and
  * ordering of events belonging to the same download.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public interface DownloadEvent {
 

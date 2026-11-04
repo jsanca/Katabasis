@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>This class tracks the evolving internal state of a download while it is being
  * executed. It can produce immutable {@link DownloadTaskSnapshot} views for API
  * consumers without exposing its mutable internals directly.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class DownloadTask {
 

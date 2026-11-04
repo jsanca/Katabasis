@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * contain a usable file name, a default fallback name is returned instead.
  *
  * <p>This class is stateless and thread-safe.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class FileNameResolver {
 

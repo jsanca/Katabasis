@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p>This coordinator keeps pause state outside of {@code DownloadTask} and
  * allows a running download to block at safe checkpoints until execution is
  * resumed.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class PauseCoordinator {
 
@@ -22,6 +22,9 @@ public final class PauseCoordinator {
 
     private final ConcurrentMap<String, PauseState> states;
 
+    /**
+     * Creates an empty coordinator with no per-download state.
+     */
     public PauseCoordinator() {
         this.states = new ConcurrentHashMap<>();
     }
@@ -102,6 +105,9 @@ public final class PauseCoordinator {
         }
     }
 
+    /**
+     * Per-download pause state guarded by a lock and a resume condition.
+     */
     private static final class PauseState {
 
         private final ReentrantLock lock;

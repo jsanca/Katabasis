@@ -13,7 +13,7 @@ import java.util.function.Consumer;
  * This interface defines the entry point for submitting downloads and
  * receiving lifecycle events.
  * 
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public interface DownloadManager {
 
@@ -47,8 +47,32 @@ public interface DownloadManager {
      */
     DownloadControlResult cancel(String downloadId);
 
+    /**
+     * Requests a cooperative pause of the download identified by the given id.
+     *
+     * <p>A successful result means the pause request was accepted for an
+     * existing task. The transfer stops at the next checkpoint and emits a
+     * {@code DownloadPausedEvent}; the returned status is
+     * {@link jsanca.katabasis.core.api.model.DownloadControlStatus#REQUESTED}.
+     *
+     * @param downloadId the identifier of the download to pause
+     * @return a control result describing whether the pause request was accepted
+     * @throws NullPointerException if {@code downloadId} is null
+     */
     DownloadControlResult pause(String downloadId);
 
+    /**
+     * Requests resuming a paused download.
+     *
+     * <p>A successful result means the resume request was accepted for an
+     * existing task. The blocked download thread wakes and emits a
+     * {@code DownloadResumedEvent}; the returned status is
+     * {@link jsanca.katabasis.core.api.model.DownloadControlStatus#REQUESTED}.
+     *
+     * @param downloadId the identifier of the download to resume
+     * @return a control result describing whether the resume request was accepted
+     * @throws NullPointerException if {@code downloadId} is null
+     */
     DownloadControlResult resume(String downloadId);
 
     /**

@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /**
  * Event emitted when a download is cancelled.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public record DownloadCancelledEvent(
         DownloadInfo downloadInfo,

@@ -10,7 +10,7 @@ import java.util.Objects;
  * remains consistent across the downloader components.
  *
  * <p>This class is stateless and thread-safe.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class PercentageCalculator {
 

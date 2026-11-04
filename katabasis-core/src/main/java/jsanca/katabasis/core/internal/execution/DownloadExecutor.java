@@ -8,7 +8,7 @@ import java.util.Objects;
  * <p>This interface hides the concurrency strategy used by the downloader. Implementations
  * may use virtual threads, platform threads, semaphores, queues, or other execution
  * policies without exposing those details to higher-level components.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public interface DownloadExecutor {
 

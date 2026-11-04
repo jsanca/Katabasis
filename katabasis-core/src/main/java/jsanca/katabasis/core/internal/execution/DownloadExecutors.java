@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Factory for creating {@link DownloadExecutor} instances.
- * @author jsanca & elo
+ * @author jsanca &amp; elo
  */
 public final class DownloadExecutors {
 
