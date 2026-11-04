@@ -29,6 +29,7 @@ Only durable artifacts are indexed. Interactions that left no durable artifact a
 | K-0.1-T06 | Add timeout configuration and handling to HTTP strategies | DONE | K-0.1-T04 | [task](agents/tasks/K-0.1-T06.md) | [report](agents/reports/K-0.1-T06-http-timeout.md) | — | — | — |
 | K-0.1-T07 | Segmented HTTP resource integrity & capability negotiation | DONE | K-0.1-T06, KATABASIS-ROADMAP-001 | [task](agents/tasks/K-0.1-T07.md) | [report](agents/reports/K-0.1-T07-integrity.md) | [review](agents/reports/K-0.1-T07-REVIEW-001.md) | — | — |
 | K-0.1-T08 | HTTP resource cleanup & lifecycle verification | DONE | K-0.1-T07, K-0.1-T07-REVIEW-001 | [task](agents/tasks/K-0.1-T08.md) | [report](agents/reports/K-0.1-T08-lifecycle.md) | — | — | — |
+| K-0.1-T09 | HTTP end-to-end integration verification via DownloadManager public API | DONE | K-0.1-T08 | [task](agents/tasks/K-0.1-T09.md) | [report](agents/reports/K-0.1-T09-e2e.md) | — | — | — |
 
 ## Maintenance
 
