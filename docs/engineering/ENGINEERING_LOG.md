@@ -30,6 +30,7 @@ Only durable artifacts are indexed. Interactions that left no durable artifact a
 | K-0.1-T07 | Segmented HTTP resource integrity & capability negotiation | DONE | K-0.1-T06, KATABASIS-ROADMAP-001 | [task](agents/tasks/K-0.1-T07.md) | [report](agents/reports/K-0.1-T07-integrity.md) | [review](agents/reports/K-0.1-T07-REVIEW-001.md) | — | — |
 | K-0.1-T08 | HTTP resource cleanup & lifecycle verification | DONE | K-0.1-T07, K-0.1-T07-REVIEW-001 | [task](agents/tasks/K-0.1-T08.md) | [report](agents/reports/K-0.1-T08-lifecycle.md) | — | — | — |
 | K-0.1-T09 | HTTP end-to-end integration verification via DownloadManager public API | DONE | K-0.1-T08 | [task](agents/tasks/K-0.1-T09.md) | [report](agents/reports/K-0.1-T09-e2e.md) | — | — | — |
+| K-0.1-T10 | URL list concurrency & scheduling verification | DONE | K-0.1-T09 | [task](agents/tasks/K-0.1-T10.md) | [report](agents/reports/K-0.1-T10-concurrency.md) | — | — | — |
 
 ## Maintenance
 

@@ -34,7 +34,7 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 | ~~K-0.1-T07~~ | ~~Validate `ETag` / `If-Range` headers in segmented strategy for content integrity~~ **DONE** | K-0.1-T06 | — |
 | ~~K-0.1-T08~~ | ~~Resource cleanup tests: verify no file handle or partial file leaks on cancellation/failure~~ **DONE** | K-0.1-T07 | — |
 | ~~K-0.1-T09~~ | ~~Expand HTTP integration tests with controlled in-process server~~ **DONE** | K-0.1-T08 | — |
-| K-0.1-T10 | Verify URL list (concurrent) downloads and concurrency limit enforcement | — | — |
+| ~~K-0.1-T10~~ | ~~Verify URL list (concurrent) downloads and concurrency limit enforcement~~ **DONE** | — | — |
 
 ### Definition of Done — 0.1
 
@@ -45,6 +45,7 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 - [x] No partial files or open file handles remain after cancellation or failure — K-0.1-T08
 - [x] ETag/If-Range mismatch is detected and raises `DownloadFailedEvent` with appropriate error code — K-0.1-T07
 - [x] `HttpDownloadOrchestratorTest` and `HttpDownloadSupportTest` coverage is known and not empty — K-0.1-T09
+- [x] Concurrency limit enforcement verified: `maxConcurrentDownloads` semaphore bounds parallel transfers; failed/cancelled downloads release permits; paused downloads hold permits — K-0.1-T10
 
 ---
 
