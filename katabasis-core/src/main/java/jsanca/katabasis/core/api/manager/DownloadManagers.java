@@ -1,9 +1,11 @@
 package jsanca.katabasis.core.api.manager;
 
+import jsanca.katabasis.core.api.event.DownloadCancelledEvent;
 import jsanca.katabasis.core.api.event.DownloadErrorCode;
 import jsanca.katabasis.core.api.event.DownloadEvent;
 import jsanca.katabasis.core.api.event.DownloadFailedEvent;
 import jsanca.katabasis.core.api.event.DownloadStartedEvent;
+import jsanca.katabasis.core.api.exception.DownloadRejectedException;
 import jsanca.katabasis.core.api.model.*;
 import jsanca.katabasis.core.api.model.RetryConfig;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
@@ -23,8 +25,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 /**
@@ -65,6 +71,8 @@ public final class DownloadManagers {
 
         private static final Logger log = LoggerFactory.getLogger(DefaultDownloadManager.class);
 
+        private enum ManagerLifecycle { OPEN, SHUTTING_DOWN, CLOSED }
+
         private final DownloadConfig config;
         private final DownloadExecutor executor;
         private final List<Consumer<DownloadEvent>> listeners = new CopyOnWriteArrayList<>();
@@ -73,6 +81,11 @@ public final class DownloadManagers {
         private final DownloadRegistry downloadRegistry = new DownloadRegistry();
 
         private final PauseCoordinator pauseCoordinator = new PauseCoordinator();
+
+        private volatile ManagerLifecycle lifecycle = ManagerLifecycle.OPEN;
+        private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
+        private final CountDownLatch closeLatch = new CountDownLatch(1);
+        private final Set<String> shutdownCancelledIds = ConcurrentHashMap.newKeySet();
 
         DefaultDownloadManager(final DownloadConfig config, final DownloadExecutor executor) {
             this(config, executor, new DefaultDownloadStrategyResolver(config));
@@ -90,6 +103,7 @@ public final class DownloadManagers {
         public DownloadSubmissionResult download(final DownloadRequest request) {
 
             Objects.requireNonNull(request, "request must not be null");
+
             final String downloadId = UUID.randomUUID().toString();
             final DownloadTask task = new DownloadTask(
                     new DownloadInfo(downloadId, request.sourceUri(), request.targetPath()));
@@ -100,8 +114,18 @@ public final class DownloadManagers {
                     .orElse(config.retryConfig());
 
             final Instant createdAt = Instant.now();
-            this.downloadRegistry.register(task);
-            this.executor.execute(() -> runDownload(task, effectiveRetry));
+
+            lifecycleLock.readLock().lock();
+            try {
+                if (lifecycle != ManagerLifecycle.OPEN) {
+                    throw new DownloadRejectedException(
+                            "DownloadManager is " + lifecycle + "; new submissions are not accepted");
+                }
+                this.downloadRegistry.register(task);
+                this.executor.execute(() -> runDownload(task, effectiveRetry));
+            } finally {
+                lifecycleLock.readLock().unlock();
+            }
 
             return new DownloadSubmissionResult(downloadId, DownloadStatus.PENDING, createdAt);
         }
@@ -159,8 +183,11 @@ public final class DownloadManagers {
         private void emit(final DownloadEvent event) {
 
             Objects.requireNonNull(event, "event must not be null");
+            if (event instanceof DownloadCancelledEvent cancelled
+                    && shutdownCancelledIds.contains(cancelled.downloadInfo().downloadId())) {
+                return;
+            }
             for (final Consumer<DownloadEvent> listener : listeners) {
-
                 listener.accept(event);
             }
         }
@@ -249,6 +276,44 @@ public final class DownloadManagers {
                     "Could not invoke resume because task was not found: " + downloadId,
                     null
             );
+        }
+
+        @Override
+        public void close() {
+            lifecycleLock.writeLock().lock();
+            final boolean isFirstCaller;
+            try {
+                if (lifecycle == ManagerLifecycle.OPEN) {
+                    lifecycle = ManagerLifecycle.SHUTTING_DOWN;
+                    isFirstCaller = true;
+                    for (final DownloadTask task : downloadRegistry.allTasks()) {
+                        final String id = task.info().downloadId();
+                        shutdownCancelledIds.add(id);
+                        pauseCoordinator.clear(id);
+                        task.requestCancellation();
+                    }
+                } else {
+                    isFirstCaller = false;
+                }
+            } finally {
+                lifecycleLock.writeLock().unlock();
+            }
+
+            if (!isFirstCaller) {
+                try {
+                    closeLatch.await();
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return;
+            }
+
+            try {
+                executor.close();
+            } finally {
+                lifecycle = ManagerLifecycle.CLOSED;
+                closeLatch.countDown();
+            }
         }
     }
 }

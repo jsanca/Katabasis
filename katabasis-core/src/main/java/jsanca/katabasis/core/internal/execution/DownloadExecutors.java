@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public final class DownloadExecutors {
     static final class VirtualThreadDownloadExecutor implements DownloadExecutor {
 
         private static final Logger log = LoggerFactory.getLogger(VirtualThreadDownloadExecutor.class);
+        private static final int SHUTDOWN_TIMEOUT_SECONDS = 10;
 
         private final ExecutorService executor;
         private final Semaphore semaphore;
@@ -48,6 +50,19 @@ public final class DownloadExecutors {
             }
             this.executor = Executors.newVirtualThreadPerTaskExecutor();
             this.semaphore = new Semaphore(maxConcurrentDownloads);
+        }
+
+        @Override
+        public void close() {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.warn("VirtualThreadDownloadExecutor did not terminate within {}s", SHUTDOWN_TIMEOUT_SECONDS);
+                }
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted while awaiting executor shutdown");
+            }
         }
 
         @Override

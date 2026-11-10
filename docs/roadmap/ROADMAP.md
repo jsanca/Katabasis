@@ -68,7 +68,7 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 | --- | --- | --- | --- |
 | K-0.2-T01 | Decide CLI framework (picocli or other); document in ADR-004 | — | ADR-004 |
 | K-0.2-T02 | Add `requires jsanca.katabasis.core` to `katabasis-cli` module-info and pom.xml dependency | — | — |
-| K-0.2-T03 | Add `AutoCloseable` to `DownloadManager` interface; implement graceful shutdown | — | ADR-003 |
+| ~~K-0.2-T03~~ | ~~Add `AutoCloseable` to `DownloadManager` interface; implement graceful shutdown~~ **DONE** | — | ADR-003 |
 | K-0.2-T04 | Implement CLI: download single URL with progress display | K-0.2-T01, K-0.2-T02 | — |
 | K-0.2-T05 | Implement CLI: download from URL list file | K-0.2-T04 | — |
 | K-0.2-T06 | CLI options: destination folder, concurrency, segment count, retry policy | K-0.2-T04 | — |

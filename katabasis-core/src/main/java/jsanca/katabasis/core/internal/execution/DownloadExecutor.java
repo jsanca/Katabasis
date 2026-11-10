@@ -10,7 +10,7 @@ import java.util.Objects;
  * policies without exposing those details to higher-level components.
  * @author jsanca &amp; elo
  */
-public interface DownloadExecutor {
+public interface DownloadExecutor extends AutoCloseable {
 
     /**
      * Executes the provided task according to the configured execution strategy.
@@ -19,6 +19,14 @@ public interface DownloadExecutor {
      * @throws NullPointerException if {@code task} is {@code null}
      */
     void execute(Runnable task);
+
+    /**
+     * Shuts down the executor and waits for in-flight tasks to complete.
+     *
+     * <p>Implementations must not throw checked exceptions.
+     */
+    @Override
+    void close();
 
     /**
      * Validates that the provided task is not {@code null}.

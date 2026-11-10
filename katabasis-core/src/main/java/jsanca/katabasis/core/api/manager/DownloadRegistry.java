@@ -5,6 +5,7 @@ import jsanca.katabasis.core.internal.model.DownloadTask;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -95,6 +96,15 @@ public final class DownloadRegistry {
             snapshots.put(entry.getKey(), entry.getValue().snapshot());
         }
         return Collections.unmodifiableMap(snapshots);
+    }
+
+    /**
+     * Returns an immutable snapshot of all currently registered tasks.
+     *
+     * @return list of active tasks
+     */
+    public List<DownloadTask> allTasks() {
+        return List.copyOf(tasks.values());
     }
 
     /**

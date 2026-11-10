@@ -32,6 +32,9 @@ Only durable artifacts are indexed. Interactions that left no durable artifact a
 | K-0.1-T09 | HTTP end-to-end integration verification via DownloadManager public API | DONE | K-0.1-T08 | [task](agents/tasks/K-0.1-T09.md) | [report](agents/reports/K-0.1-T09-e2e.md) | — | — | — |
 | K-0.1-T10 | URL list concurrency & scheduling verification | DONE | K-0.1-T09 | [task](agents/tasks/K-0.1-T10.md) | [report](agents/reports/K-0.1-T10-concurrency.md) | — | — | — |
 
+| K-0.2-PRE-001 | CLI & Persistence readiness assessment — component state, ADR-003/004 recommendations, recovery gap analysis, revised 0.2 backlog | DONE | K-0.1-T10 | [task](agents/tasks/K-0.2-PRE-001.md) | [report](agents/reports/K-0.2-PRE-001-readiness-assessment.md) | — | — | — |
+| K-0.2-T03 | Add AutoCloseable to DownloadManager; implement graceful shutdown (3-state lifecycle, RW-lock admission gate, executor drain, event suppression) | DONE | K-0.2-PRE-001 | [task](agents/tasks/K-0.2-T03.md) | [report](agents/reports/K-0.2-T03-lifecycle.md) | — | — | [ADR-003](../adr/ADR-003-download-manager-lifecycle.md) |
+
 ## Maintenance
 
 - Keep one row per logical engineering task and preserve completed, superseded, and cancelled history.

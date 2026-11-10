@@ -89,7 +89,9 @@ Core public data types use Java **records**: `DownloadRequest`, `DownloadConfig`
 
 ### In-memory only (by design)
 
-`DownloadRegistry` and all task state are in-memory. The `DownloadStateStore` interface is a placeholder for future persistence. Do not implement persistence without explicit request.
+`DownloadRegistry` and all task state are in-memory.
+
+`DownloadStateStore` is a fully specified interface in `katabasis-core`. The `katabasis-storage-json` module provides a production-ready implementation: `FileDownloadStateStore`, `CheckpointCoordinator`, and the `DownloadStateStores` factory. That module is not wired into `DownloadManagers` yet — wiring is deferred to K-0.2-T10. Do not wire persistence or implement recovery without an explicit request.
 
 ### `katabasis-ui` — UI architecture
 

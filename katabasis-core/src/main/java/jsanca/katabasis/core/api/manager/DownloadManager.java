@@ -15,7 +15,7 @@ import java.util.function.Consumer;
  * 
  * @author jsanca &amp; elo
  */
-public interface DownloadManager {
+public interface DownloadManager extends AutoCloseable {
 
     /**
      * Submits a download request.
@@ -88,4 +88,21 @@ public interface DownloadManager {
      * @param listener the listener to remove
      */
     void removeListener(Consumer<DownloadEvent> listener);
+
+    /**
+     * Initiates a graceful shutdown and blocks until all active downloads have
+     * terminated cooperatively or the bounded shutdown timeout (10 seconds) is exceeded.
+     *
+     * <p>Downloads in flight are signalled to stop cooperatively. Downloads stopped by
+     * shutdown are <em>not</em> reported as user-cancelled; no {@code DownloadCancelledEvent}
+     * is emitted for shutdown-induced termination.
+     *
+     * <p>Once shutdown begins, calls to {@link #download(jsanca.katabasis.core.api.model.DownloadRequest)} throw
+     * {@link jsanca.katabasis.core.api.exception.DownloadRejectedException}.
+     *
+     * <p>Concurrent and repeated calls are safe and idempotent; a call that arrives while
+     * another thread is already shutting down will block until the shutdown completes.
+     */
+    @Override
+    void close();
 }
