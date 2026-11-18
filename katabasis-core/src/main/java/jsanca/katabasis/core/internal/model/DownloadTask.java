@@ -1,5 +1,6 @@
 package jsanca.katabasis.core.internal.model;
 
+import jsanca.katabasis.core.api.manager.CheckpointSource;
 import jsanca.katabasis.core.api.model.DownloadInfo;
 import jsanca.katabasis.core.api.model.DownloadStatus;
 import jsanca.katabasis.core.api.model.DownloadTaskSnapshot;
@@ -30,6 +31,7 @@ public final class DownloadTask {
     private final AtomicReference<Instant> updatedAt;
     private final AtomicReference<String> errorMessage;
     private final PauseToken pauseToken;
+    private volatile CheckpointSource checkpointSource;
 
     /**
      * Creates a new download task in {@link DownloadStatus#PENDING} state.
@@ -56,6 +58,35 @@ public final class DownloadTask {
      */
     public DownloadInfo info() {
         return info;
+    }
+
+    /**
+     * Returns the instant at which this task was created.
+     *
+     * @return creation timestamp
+     */
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    /**
+     * Returns the checkpoint source registered by the executing strategy, or
+     * {@code null} if no source has been registered yet.
+     *
+     * @return the registered source, or {@code null}
+     */
+    public CheckpointSource checkpointSource() {
+        return checkpointSource;
+    }
+
+    /**
+     * Registers the checkpoint source provided by the executing strategy.
+     * May be called multiple times on retry; the latest registration wins.
+     *
+     * @param source the source to register
+     */
+    public void setCheckpointSource(final CheckpointSource source) {
+        this.checkpointSource = source;
     }
 
     /**

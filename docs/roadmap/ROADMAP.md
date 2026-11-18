@@ -66,16 +66,16 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 
 | Task ID | Description | Depends On | ADR Required |
 | --- | --- | --- | --- |
-| K-0.2-T01 | Decide CLI framework (picocli or other); document in ADR-004 | — | ADR-004 |
-| K-0.2-T02 | Add `requires jsanca.katabasis.core` to `katabasis-cli` module-info and pom.xml dependency | — | — |
+| ~~K-0.2-T01~~ | ~~Decide CLI framework (picocli or other); document in ADR-004~~ **DONE** | — | ADR-004 |
+| ~~K-0.2-T02~~ | ~~Add `requires jsanca.katabasis.core` to `katabasis-cli` module-info and pom.xml dependency~~ **DONE** | — | — |
 | ~~K-0.2-T03~~ | ~~Add `AutoCloseable` to `DownloadManager` interface; implement graceful shutdown~~ **DONE** | — | ADR-003 |
-| K-0.2-T04 | Implement CLI: download single URL with progress display | K-0.2-T01, K-0.2-T02 | — |
-| K-0.2-T05 | Implement CLI: download from URL list file | K-0.2-T04 | — |
-| K-0.2-T06 | CLI options: destination folder, concurrency, segment count, retry policy | K-0.2-T04 | — |
-| K-0.2-T07 | CLI pause/resume/cancel via signal or interactive command | K-0.2-T04 | — |
-| K-0.2-T08 | CLI exit codes: 0 = success, non-zero = partial/all failed; structured error output | K-0.2-T04 | — |
-| K-0.2-T09 | Decide persistence strategy; document in ADR-002 | — | ADR-002 |
-| K-0.2-T10 | Implement `DownloadStateStore` (file-based, one file per download session) | K-0.2-T09 | — |
+| ~~K-0.2-T04~~ | ~~Implement CLI: download single URL with progress display~~ **DONE** | K-0.2-T01, K-0.2-T02 | — |
+| ~~K-0.2-T05~~ | ~~Implement CLI: download from URL list file~~ **DONE** | K-0.2-T04 | — |
+| ~~K-0.2-T06~~ | ~~CLI options: destination folder, concurrency, segment count, retry policy~~ **DONE** | K-0.2-T04 | — |
+| ~~K-0.2-T07~~ | ~~CLI pause/resume/cancel via signal or interactive command~~ **DONE** | K-0.2-T04 | — |
+| ~~K-0.2-T08~~ | ~~CLI exit codes: 0 = success, non-zero = partial/all failed; structured error output~~ **DONE** | K-0.2-T04 | — |
+| ~~K-0.2-T09~~ | ~~Decide persistence strategy; document in ADR-002~~ **DONE** | — | ADR-002 |
+| ~~K-0.2-T10~~ | ~~Storage wiring & consistent checkpoints: `CheckpointSource` SPI, per-segment `AtomicLong[]`, shutdown snapshot consumer, CLI/UI wiring, 2 E2E tests~~ **DONE** | K-0.2-T09 | — |
 | K-0.2-T11 | Recovery: resume an interrupted HTTP download after process restart (requires range support and stored byte offset) | K-0.2-T10 | — |
 | K-0.2-T12 | Optional checksum validation after download (SHA-256, MD5; flag-driven) | K-0.2-T04 | — |
 | K-0.2-T13 | CLI integration tests (spawn subprocess or use programmatic entry) | K-0.2-T04 | — |

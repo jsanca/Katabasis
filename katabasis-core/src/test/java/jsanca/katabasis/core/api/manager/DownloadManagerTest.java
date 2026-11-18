@@ -2,6 +2,8 @@ package jsanca.katabasis.core.api.manager;
 
 import jsanca.katabasis.core.api.event.*;
 import jsanca.katabasis.core.api.model.*;
+import jsanca.katabasis.core.internal.execution.DownloadExecutors;
+import jsanca.katabasis.core.internal.strategy.DownloadStrategyResolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -308,5 +310,51 @@ class DownloadManagerTest {
             assertArrayEquals(content, Files.readAllBytes(dest),
                     "File content must be complete and correct after pause/resume");
         }
+    }
+
+    // ── K-0.2-HARDEN-001 — Error surfaces as DownloadFailedEvent ─────────────
+
+    /**
+     * Verifies that an {@link Error} thrown by a download strategy is captured by the
+     * {@code catch (Throwable)} in {@code DefaultDownloadManager.runDownload} and emitted
+     * as a {@link DownloadFailedEvent} rather than silently killing the virtual thread.
+     *
+     * <p>Previously, {@code catch (Exception)} would miss {@link Error} subclasses,
+     * leaving callers blocked indefinitely waiting for a terminal event that never arrived.
+     */
+    @Test
+    void downloadManagerShouldEmitFailedEventWhenStrategyThrowsError() throws Exception {
+        final DownloadConfig config = DownloadConfig.defaultConfig();
+        final DownloadStrategyResolver throwingResolver =
+                info -> (task, ctx, emit) -> { throw new AssertionError("injected fatal error"); };
+        final DownloadManager manager = new DownloadManagers.DefaultDownloadManager(
+                config,
+                DownloadExecutors.createVirtualThreadExecutor(config),
+                throwingResolver);
+
+        final List<DownloadEvent> events = new CopyOnWriteArrayList<>();
+        final CountDownLatch failedLatch = new CountDownLatch(1);
+        manager.addListener(event -> {
+            events.add(event);
+            if (event instanceof DownloadFailedEvent) { failedLatch.countDown(); }
+        });
+
+        final Path dest = tempDir.resolve("error-test.bin");
+        manager.download(DownloadRequest.builder()
+                .sourceUri(URI.create("http://localhost/irrelevant"))
+                .targetPath(dest)
+                .build());
+
+        assertTrue(failedLatch.await(5, TimeUnit.SECONDS),
+                "DownloadFailedEvent must be emitted when strategy throws Error");
+
+        final DownloadFailedEvent failed = events.stream()
+                .filter(e -> e instanceof DownloadFailedEvent)
+                .map(e -> (DownloadFailedEvent) e)
+                .findFirst().orElseThrow();
+
+        assertEquals("injected fatal error", failed.errorMessage(),
+                "Error message must propagate to DownloadFailedEvent");
+        assertEquals(DownloadErrorCode.UNKNOWN, failed.errorCode());
     }
 }

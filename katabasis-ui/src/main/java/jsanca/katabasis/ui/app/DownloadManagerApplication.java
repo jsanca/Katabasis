@@ -1,7 +1,11 @@
 package jsanca.katabasis.ui.app;
 
+import jsanca.katabasis.core.api.manager.CheckpointSourceProvider;
 import jsanca.katabasis.core.api.manager.DownloadManager;
 import jsanca.katabasis.core.api.manager.DownloadManagers;
+import jsanca.katabasis.core.api.manager.DownloadStateStore;
+import jsanca.katabasis.storage.json.api.CheckpointCoordinator;
+import jsanca.katabasis.storage.json.api.DownloadStateStores;
 import jsanca.katabasis.core.api.model.DownloadRequest;
 import jsanca.katabasis.core.api.model.DownloadSubmissionResult;
 import jsanca.katabasis.core.api.model.DownloadControlResult;
@@ -63,6 +67,7 @@ public final class DownloadManagerApplication extends Application {
     private final static Logger logger = LoggerFactory.getLogger(DownloadManagerApplication.class);
     private final ObservableList<DownloadRow> downloads = FXCollections.observableArrayList();
     private DownloadManager downloadManager;
+    private CheckpointCoordinator checkpointCoordinator;
     private Path downloadDirectory;
 
     public static void main(final String[] args) {
@@ -82,7 +87,20 @@ public final class DownloadManagerApplication extends Application {
                 "Folder: " + this.downloadDirectory.toAbsolutePath());
         downloadDirectoryLabel.getStyleClass().add("subtitle-label");
 
-        this.downloadManager = DownloadManagers.createDefault();
+        final java.nio.file.Path checkpointDir =
+                java.nio.file.Path.of(System.getProperty("user.home"), ".katabasis", "checkpoints");
+        try {
+            java.nio.file.Files.createDirectories(checkpointDir);
+        } catch (java.io.IOException ex) {
+            logger.warn("Could not create checkpoint directory: {}", ex.getMessage());
+        }
+        final DownloadStateStore checkpointStore = DownloadStateStores.fileStore(checkpointDir);
+        this.downloadManager = DownloadManagers.createDefault(
+                jsanca.katabasis.core.api.model.DownloadConfig.defaultConfig(),
+                snap -> { try { checkpointStore.save(snap); } catch (Exception ignored) {} });
+        this.checkpointCoordinator = CheckpointCoordinator.create(
+                this.downloadManager, (CheckpointSourceProvider) this.downloadManager,
+                checkpointStore, java.time.Duration.ofSeconds(5), ev -> {});
 
         this.downloadManager.addListener(event -> {
             Platform.runLater(() -> handleEvent(event));
@@ -152,6 +170,16 @@ public final class DownloadManagerApplication extends Application {
         primaryStage.show();
     }
 
+    @Override
+    public void stop() {
+        if (checkpointCoordinator != null) {
+            try { checkpointCoordinator.close(); } catch (Exception ignored) {}
+        }
+        if (downloadManager != null) {
+            try { downloadManager.close(); } catch (Exception ignored) {}
+        }
+    }
+
     private void addDownloadFromClipboard(final Label subtitleLabel) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
 
@@ -202,10 +230,10 @@ public final class DownloadManagerApplication extends Application {
     private boolean submitDownload(final String url, final Label subtitleLabel) {
         try {
             final Path targetPath = buildTargetPath(url);
-            final DownloadRequest request = new DownloadRequest(
-                    URI.create(url),
-                    targetPath
-            );
+            final DownloadRequest request = DownloadRequest.builder()
+                    .sourceUri(URI.create(url))
+                    .targetPath(targetPath)
+                    .build();
 
             final DownloadSubmissionResult result = this.downloadManager.download(request);
 

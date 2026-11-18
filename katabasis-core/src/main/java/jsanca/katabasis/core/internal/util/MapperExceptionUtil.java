@@ -20,7 +20,7 @@ public class MapperExceptionUtil {
      * @param e the exception to classify
      * @return the matching error code
      */
-    public static DownloadErrorCode mapExceptionToErrorCode(final Exception e) {
+    public static DownloadErrorCode mapExceptionToErrorCode(final Throwable e) {
         // todo: on the future create a MapperExceptionUtil to handle this
         if (e instanceof IOException) {
             return DownloadErrorCode.IO_ERROR;

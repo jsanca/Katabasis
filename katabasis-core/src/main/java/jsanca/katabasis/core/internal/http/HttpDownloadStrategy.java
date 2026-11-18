@@ -1,7 +1,10 @@
 package jsanca.katabasis.core.internal.http;
 
 import jsanca.katabasis.core.api.event.*;
+import jsanca.katabasis.core.api.manager.CheckpointSource;
 import jsanca.katabasis.core.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.model.DownloadSnapshot;
+import jsanca.katabasis.core.api.model.DownloadStatus;
 import jsanca.katabasis.core.api.model.HttpTimeoutConfig;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
@@ -23,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -114,11 +118,27 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                     .firstValueAsLong("Content-Length")
                     .orElse(0L);
 
+            // Capture ETag and expected bytes for the checkpoint source.
+            final String etag = HttpRangeSupport.extractStrongETag(response).orElse(null);
+            final long expectedTotalBytes = totalBytes == 0L ? -1L : totalBytes;
+            final AtomicLong downloadedBytesAtomic = new AtomicLong(0L);
+
+            // Register the checkpoint source. On retry this overwrites the previous registration.
+            final CheckpointSource source = at -> {
+                final DownloadStatus s = task.status() == DownloadStatus.PAUSED
+                        ? DownloadStatus.PAUSED : DownloadStatus.IN_PROGRESS;
+                return new DownloadSnapshot(
+                        info.downloadId(), info.sourceUri(), info.targetPath(),
+                        null, etag, expectedTotalBytes, downloadedBytesAtomic.get(),
+                        s, List.of(), task.createdAt(), at);
+            };
+            task.setCheckpointSource(source);
+
             log.debug("HTTP response OK for {}. contentLength={}", info.downloadId(), totalBytes);
 
             try (OutputStream outputStream = Files.newOutputStream(info.targetPath())) {
                 final long downloadedBytes = doDownload(task, inputStream, outputStream,
-                        totalBytes, pauseCoordinator, emitter);
+                        totalBytes, pauseCoordinator, emitter, downloadedBytesAtomic);
                 outputStream.flush();
                 HttpDownloadSupport.onComplete(info, emitter, startedAt, downloadedBytes);
             }
@@ -130,10 +150,10 @@ public final class HttpDownloadStrategy implements DownloadStrategy {
                             final OutputStream outputStream,
                             final long totalBytes,
                             final PauseCoordinator pauseCoordinator,
-                            final Consumer<DownloadEvent> emitter) throws IOException, InterruptedException {
+                            final Consumer<DownloadEvent> emitter,
+                            final AtomicLong downloadedBytes) throws IOException, InterruptedException {
 
         final byte[] buffer = new byte[bufferSize];
-        final AtomicLong downloadedBytes = new AtomicLong(0L);
         int bytesRead;
         final DownloadInfo info = task.info();
         final String downloadId = info.downloadId();

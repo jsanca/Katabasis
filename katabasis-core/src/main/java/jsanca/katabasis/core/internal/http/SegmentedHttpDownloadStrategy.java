@@ -1,8 +1,12 @@
 package jsanca.katabasis.core.internal.http;
 
 import jsanca.katabasis.core.api.event.*;
+import jsanca.katabasis.core.api.manager.CheckpointSource;
 import jsanca.katabasis.core.api.model.DownloadInfo;
+import jsanca.katabasis.core.api.model.DownloadSnapshot;
+import jsanca.katabasis.core.api.model.DownloadStatus;
 import jsanca.katabasis.core.api.model.HttpTimeoutConfig;
+import jsanca.katabasis.core.api.model.SegmentSnapshot;
 import jsanca.katabasis.core.internal.exception.DownloadCancelledException;
 import jsanca.katabasis.core.internal.exception.HttpDownloadStatusException;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
@@ -25,10 +29,11 @@ import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.StructuredTaskScope;
-import java.util.concurrent.StructuredTaskScope.FailedException;
 import java.util.concurrent.StructuredTaskScope.Joiner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -119,6 +124,17 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
             final List<HttpRangeSupport.ChunkRange> chunks =
                     HttpRangeSupport.split(contentLength, segmentCount);
 
+            // Per-segment confirmed bytes, mirroring the rewind semantics of totalDownloaded.
+            final AtomicLong[] segmentConfirmedBytes = new AtomicLong[chunks.size()];
+            for (int i = 0; i < segmentConfirmedBytes.length; i++) {
+                segmentConfirmedBytes[i] = new AtomicLong(0L);
+            }
+
+            // Register the checkpoint source so the coordinator can pull accurate snapshots.
+            final CheckpointSource source = at -> buildCheckpointSnapshot(task, info, chunks,
+                    segmentConfirmedBytes, at);
+            task.setCheckpointSource(source);
+
             log.debug("Downloading {} in {} segments (totalBytes={})",
                     info.downloadId(), chunks.size(), contentLength);
 
@@ -136,8 +152,8 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                 try (var scope = StructuredTaskScope.open(Joiner.<Void>awaitAllSuccessfulOrThrow())) {
                     for (final HttpRangeSupport.ChunkRange chunk : chunks) {
                         scope.fork(() -> downloadChunk(chunk, channel, task,
-                                totalDownloaded, context, emitter, pausedFired, resumedFired,
-                                retryExecutor));
+                                totalDownloaded, segmentConfirmedBytes, context, emitter,
+                                pausedFired, resumedFired, retryExecutor));
                     }
                     scope.join();
                 }
@@ -145,7 +161,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
 
             HttpDownloadSupport.onComplete(info, emitter, startedAt, contentLength);
 
-        } catch (FailedException e) {
+        } catch (ExecutionException e) {
             final Throwable cause = e.getCause();
             HttpDownloadSupport.deleteFile(info);
             if (cause instanceof DownloadCancelledException dce) {
@@ -164,10 +180,32 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
         }
     }
 
+    private DownloadSnapshot buildCheckpointSnapshot(final DownloadTask task,
+                                                       final DownloadInfo info,
+                                                       final List<HttpRangeSupport.ChunkRange> chunks,
+                                                       final AtomicLong[] segmentConfirmedBytes,
+                                                       final Instant at) {
+        final List<SegmentSnapshot> segSnaps = new ArrayList<>(chunks.size());
+        long total = 0L;
+        for (int i = 0; i < chunks.size(); i++) {
+            final long confirmed = segmentConfirmedBytes[i].get();
+            final HttpRangeSupport.ChunkRange c = chunks.get(i);
+            segSnaps.add(new SegmentSnapshot(c.index(), c.start(), c.end(), confirmed));
+            total += confirmed;
+        }
+        final DownloadStatus status = task.status() == DownloadStatus.PAUSED
+                ? DownloadStatus.PAUSED : DownloadStatus.IN_PROGRESS;
+        return new DownloadSnapshot(
+                info.downloadId(), info.sourceUri(), info.targetPath(),
+                null, identity.strongETag().orElse(null), identity.contentLength(),
+                total, status, segSnaps, task.createdAt(), at);
+    }
+
     private Void downloadChunk(final HttpRangeSupport.ChunkRange chunk,
                                 final FileChannel channel,
                                 final DownloadTask task,
                                 final AtomicLong totalDownloaded,
+                                final AtomicLong[] segmentConfirmedBytes,
                                 final DownloadExecutionContext context,
                                 final Consumer<DownloadEvent> emitter,
                                 final AtomicBoolean pausedFired,
@@ -177,8 +215,8 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
 
         try {
             retryExecutor.execute(
-                    () -> doChunkAttempt(chunk, channel, task, totalDownloaded, context, emitter,
-                            pausedFired, resumedFired),
+                    () -> doChunkAttempt(chunk, channel, task, totalDownloaded, segmentConfirmedBytes,
+                            context, emitter, pausedFired, resumedFired),
                     task::isCancellationRequested);
         } catch (DownloadCancelledException e) {
             throw e;
@@ -194,6 +232,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                                  final FileChannel channel,
                                  final DownloadTask task,
                                  final AtomicLong totalDownloaded,
+                                 final AtomicLong[] segmentConfirmedBytes,
                                  final DownloadExecutionContext context,
                                  final Consumer<DownloadEvent> emitter,
                                  final AtomicBoolean pausedFired,
@@ -258,7 +297,11 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
                     position += written;
                     attemptBytes += written;
 
-                    final long newTotal = totalDownloaded.addAndGet(written);
+                    // Update shared progress and per-segment confirmed bytes atomically.
+                    totalDownloaded.addAndGet(written);
+                    segmentConfirmedBytes[chunk.index()].addAndGet(written);
+
+                    final long newTotal = totalDownloaded.get();
                     emitter.accept(new DownloadProgressEvent(info, newTotal, contentLength, Instant.now()));
 
                     handlePauseRequest(task, pauseCoordinator, emitter, info,
@@ -282,6 +325,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
             } catch (final IOException e) {
                 // Rewind phantom bytes so progress does not exceed contentLength on retry.
                 totalDownloaded.addAndGet(-attemptBytes);
+                segmentConfirmedBytes[chunk.index()].addAndGet(-attemptBytes);
                 if (watchdog != null && watchdog.wasTriggered()) {
                     throw new ReadInactivityTimeoutException(
                             "Read stalled on chunk " + chunk.index()
@@ -292,6 +336,7 @@ public final class SegmentedHttpDownloadStrategy implements DownloadStrategy {
             } catch (final Exception e) {
                 // Rewind phantom bytes so progress does not exceed contentLength on retry.
                 totalDownloaded.addAndGet(-attemptBytes);
+                segmentConfirmedBytes[chunk.index()].addAndGet(-attemptBytes);
                 throw e;
             } finally {
                 if (watchdog != null) {

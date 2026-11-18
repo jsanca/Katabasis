@@ -1,5 +1,6 @@
 module jsanca.katabasis.ui {
     requires jsanca.katabasis.core;
+    requires jsanca.katabasis.storage.json;
     requires javafx.controls;
     requires javafx.graphics;
     requires org.slf4j;

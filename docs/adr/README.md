@@ -20,7 +20,9 @@ Task reports, general documentation, or a restatement of the current architectur
 
 | ID | Title | Status |
 | --- | --- | --- |
+| [ADR-002](ADR-002-versioned-json-persistence.md) | Versioned JSON Persistence Strategy | Accepted |
 | [ADR-003](ADR-003-download-manager-lifecycle.md) | DownloadManager AutoCloseable and Graceful Shutdown | Accepted |
+| [ADR-004](ADR-004-cli-framework.md) | CLI Framework: picocli | Accepted |
 
 ## Pending ADR Candidates
 
@@ -29,9 +31,9 @@ The following decisions have been identified as requiring an ADR before implemen
 | ID | Question | Phase | Blocking Task |
 | --- | --- | --- | --- |
 | ADR-001 | How should `RetryPolicy` expose its contract? (decorator vs. callback vs. interface methods) | 0.1 | K-0.1-T03 |
-| ADR-002 | How should `DownloadStateStore` persist state? (file/JSON vs. SQLite vs. other) | 0.2 | K-0.2-T09 |
+| ~~ADR-002~~ | ~~How should `DownloadStateStore` persist state? (file/JSON vs. SQLite vs. other)~~ **DECIDED** — see [ADR-002](ADR-002-versioned-json-persistence.md) | 0.2 | K-0.2-T09 |
 | ~~ADR-003~~ | ~~Should `DownloadManager` implement `AutoCloseable` for graceful shutdown?~~ **DECIDED** — see [ADR-003](ADR-003-download-manager-lifecycle.md) | 0.2 | K-0.2-T03 |
-| ADR-004 | Which CLI framework? (picocli vs. manual argument parsing vs. other) | 0.2 | K-0.2-T01 |
+| ~~ADR-004~~ | ~~Which CLI framework? (picocli vs. manual argument parsing vs. other)~~ **DECIDED** — see [ADR-004](ADR-004-cli-framework.md) | 0.2 | K-0.2-T01 |
 | ADR-005 | How to implement FTP/FTPS? (Apache Commons Net vs. pure JDK socket vs. other) | 0.3 | K-0.3-T01 |
 | ADR-006 | How to implement S3? (AWS SDK v2 full vs. lightweight S3-compatible HTTP approach) | 0.3 | K-0.3-T09 |
 | ADR-007 | BitTorrent Go/No-Go: integrate library vs. implement piece protocol vs. defer | 0.4 | K-0.4-T01 |

@@ -7,6 +7,7 @@ import jsanca.katabasis.core.api.event.DownloadFailedEvent;
 import jsanca.katabasis.core.api.event.DownloadStartedEvent;
 import jsanca.katabasis.core.api.exception.DownloadRejectedException;
 import jsanca.katabasis.core.api.model.*;
+import jsanca.katabasis.core.api.model.DownloadSnapshot;
 import jsanca.katabasis.core.api.model.RetryConfig;
 import jsanca.katabasis.core.internal.execution.DownloadExecutionContext;
 import jsanca.katabasis.core.internal.execution.DownloadExecutor;
@@ -59,15 +60,40 @@ public final class DownloadManagers {
      * @param config the downloader configuration
      * @return a configured download manager
      */
-    public static DownloadManager createDefault(DownloadConfig config) {
+    public static DownloadManager createDefault(final DownloadConfig config) {
         Objects.requireNonNull(config, "config must not be null");
-        return new DefaultDownloadManager(config, DownloadExecutors.createVirtualThreadExecutor(config));
+        return new DefaultDownloadManager(config,
+                DownloadExecutors.createVirtualThreadExecutor(config),
+                (Consumer<DownloadSnapshot>) null);
+    }
+
+    /**
+     * Creates a default {@link DownloadManager} with a shutdown snapshot consumer.
+     *
+     * <p>When the manager is closed, it calls {@code shutdownSnapshotConsumer} once per
+     * active download <em>before</em> signalling cancellation, so the consumer receives
+     * the final pre-cancel state. This hook is intended for the checkpoint coordinator to
+     * persist the last known state before the manager tears down.
+     *
+     * @param config                   the downloader configuration
+     * @param shutdownSnapshotConsumer called with each active download's snapshot at shutdown
+     * @return a configured download manager that also implements {@link CheckpointSourceProvider}
+     */
+    public static DownloadManager createDefault(final DownloadConfig config,
+                                                 final Consumer<DownloadSnapshot> shutdownSnapshotConsumer) {
+        Objects.requireNonNull(config,                   "config must not be null");
+        Objects.requireNonNull(shutdownSnapshotConsumer, "shutdownSnapshotConsumer must not be null");
+        return new DefaultDownloadManager(config,
+                DownloadExecutors.createVirtualThreadExecutor(config),
+                shutdownSnapshotConsumer);
     }
 
     /**
      * Default implementation kept hidden inside the factory.
+     * Also implements {@link CheckpointSourceProvider} so that external coordinator
+     * components can look up per-download sources without depending on internal types.
      */
-    static final class DefaultDownloadManager implements DownloadManager {
+    static final class DefaultDownloadManager implements DownloadManager, CheckpointSourceProvider {
 
         private static final Logger log = LoggerFactory.getLogger(DefaultDownloadManager.class);
 
@@ -77,6 +103,7 @@ public final class DownloadManagers {
         private final DownloadExecutor executor;
         private final List<Consumer<DownloadEvent>> listeners = new CopyOnWriteArrayList<>();
         private final DownloadStrategyResolver strategyResolver;
+        private final Consumer<DownloadSnapshot> shutdownSnapshotConsumer;
 
         private final DownloadRegistry downloadRegistry = new DownloadRegistry();
 
@@ -87,17 +114,38 @@ public final class DownloadManagers {
         private final CountDownLatch closeLatch = new CountDownLatch(1);
         private final Set<String> shutdownCancelledIds = ConcurrentHashMap.newKeySet();
 
-        DefaultDownloadManager(final DownloadConfig config, final DownloadExecutor executor) {
-            this(config, executor, new DefaultDownloadStrategyResolver(config));
+        DefaultDownloadManager(final DownloadConfig config,
+                               final DownloadExecutor executor,
+                               final Consumer<DownloadSnapshot> shutdownSnapshotConsumer) {
+            this(config, executor, new DefaultDownloadStrategyResolver(config), shutdownSnapshotConsumer);
         }
 
         DefaultDownloadManager(final DownloadConfig config,
                                final DownloadExecutor executor,
                                final DownloadStrategyResolver strategyResolver) {
+            this(config, executor, strategyResolver, null);
+        }
+
+        DefaultDownloadManager(final DownloadConfig config,
+                               final DownloadExecutor executor,
+                               final DownloadStrategyResolver strategyResolver,
+                               final Consumer<DownloadSnapshot> shutdownSnapshotConsumer) {
             this.config = Objects.requireNonNull(config, "config must not be null");
             this.executor = Objects.requireNonNull(executor, "executor must not be null");
             this.strategyResolver = Objects.requireNonNull(strategyResolver, "strategyResolver must not be null");
+            this.shutdownSnapshotConsumer = shutdownSnapshotConsumer; // nullable
         }
+
+        // ── CheckpointSourceProvider ──────────────────────────────────────────
+
+        @Override
+        public Optional<CheckpointSource> findSource(final String downloadId) {
+            Objects.requireNonNull(downloadId, "downloadId must not be null");
+            return downloadRegistry.findTask(downloadId)
+                    .map(DownloadTask::checkpointSource);
+        }
+
+        // ── DownloadManager ───────────────────────────────────────────────────
 
         @Override
         public DownloadSubmissionResult download(final DownloadRequest request) {
@@ -160,7 +208,7 @@ public final class DownloadManagers {
                 strategy.download(task,
                         new DownloadExecutionContext(this.pauseCoordinator, retryConfig),
                         this::emit);
-            } catch (Exception e) {
+            } catch (Throwable e) {
 
                 final Duration duration = Duration.between(occurredAt, Instant.now());
                 log.error("Download failed: {}", info.downloadId(), e);
@@ -288,6 +336,17 @@ public final class DownloadManagers {
                     isFirstCaller = true;
                     for (final DownloadTask task : downloadRegistry.allTasks()) {
                         final String id = task.info().downloadId();
+                        // Snapshot before cancel so the consumer sees the last pre-cancel state.
+                        if (shutdownSnapshotConsumer != null) {
+                            final CheckpointSource src = task.checkpointSource();
+                            if (src != null) {
+                                try {
+                                    shutdownSnapshotConsumer.accept(src.buildSnapshot(Instant.now()));
+                                } catch (final Exception ex) {
+                                    log.warn("Failed to build shutdown snapshot for {}", id, ex);
+                                }
+                            }
+                        }
                         shutdownCancelledIds.add(id);
                         pauseCoordinator.clear(id);
                         task.requestCancellation();

@@ -65,6 +65,7 @@ class CheckpointCoordinatorTest {
         @Override public DownloadControlResult resume(final String id) { throw new UnsupportedOperationException(); }
         @Override public void addListener(final Consumer<DownloadEvent> l) { listeners.add(l); }
         @Override public void removeListener(final Consumer<DownloadEvent> l) { listeners.remove(l); }
+        @Override public void close() {}
 
         void publish(final DownloadEvent event) {
             listeners.forEach(l -> l.accept(event));
