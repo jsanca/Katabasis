@@ -7,6 +7,7 @@ Current architectural understanding of Katabasis.
 - [katabasis-core.md](katabasis-core.md) — Module structure, component responsibilities, concurrency model, JPMS boundary, and interface contracts
 - [module-map.md](module-map.md) — Maven and JPMS modules with dependency direction and the exported API boundary
 - [class-model.md](class-model.md) — Public API records and events, plus the internal collaborators that execute a download
+- [checkpointing.md](checkpointing.md) — Checkpoint ownership, coordinator behavior, manifest format, and persistence guarantees
 
 ## Editorial diagrams
 

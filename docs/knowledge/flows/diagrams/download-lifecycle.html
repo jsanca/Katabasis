@@ -56,7 +56,7 @@
 
     <svg viewBox="0 0 1000 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dl-seq-title dl-seq-desc">
       <title id="dl-seq-title">Download lifecycle sequence</title>
-      <desc id="dl-seq-desc">A client submits a download to DownloadManager, which registers it and hands it to a virtual-thread executor; the manager emits a started event, resolves a strategy, the strategy emits progress inside a loop, then a completed event, and the manager removes the task from the registry.</desc>
+      <desc id="dl-seq-desc">Core execution happy path: a client submits a download to DownloadManager, which registers it and hands it to a virtual-thread executor; the manager emits a started event, resolves a strategy, the strategy emits progress inside a loop, then a completed event, and the manager removes the task from the registry. Checkpoint coordination and retry are omitted for clarity.</desc>
       <defs>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
         <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>

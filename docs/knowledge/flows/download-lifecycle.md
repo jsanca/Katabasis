@@ -1,9 +1,10 @@
 # Download Lifecycle
 
-End-to-end behavior of a single download in `katabasis-core`: submission, strategy selection, progress, pause/resume, cancellation, and failure.
+End-to-end behavior of a download in `katabasis-core`, including retry, checkpoint registration, pause/resume, cancellation, and failure.
 
-**Last verified:** 2026-11-03
-**Evidence:** `DownloadManagers.DefaultDownloadManager`, `HttpDownloadOrchestrator`, `HttpDownloadStrategy`, `SegmentedHttpDownloadStrategy`, `PauseCoordinator`, `HttpDownloadSupport`.
+**Last verified:** 2026-11-18  
+**Baseline:** `f999777`  
+**Evidence:** `DownloadManagers`, `HttpDownloadOrchestrator`, `HttpDownloadStrategy`, `SegmentedHttpDownloadStrategy`, `CheckpointCoordinator`, `PauseCoordinator`.
 
 ## Happy path
 
@@ -12,44 +13,45 @@ sequenceDiagram
     autonumber
     actor Client
     participant Manager as DownloadManager
-    participant Registry as DownloadRegistry
     participant Executor as DownloadExecutor
-    participant Resolver as StrategyResolver
     participant Strategy as DownloadStrategy
     participant Events as Event listeners
+    participant Coord as CheckpointCoordinator
 
     Client->>Manager: download(request)
-    Manager->>Registry: register(task)
+    Manager->>Manager: register task, resolve effective RetryConfig
     Manager->>Executor: execute(runDownload)
     Manager-->>Client: DownloadSubmissionResult(id, PENDING)
-    Note over Executor: virtual thread waits for a semaphore permit
+    Note over Executor: virtual thread, semaphore permit
     Executor->>Manager: runDownload(task)
     Manager->>Events: DownloadStartedEvent
-    Manager->>Resolver: resolve(info)
-    Resolver-->>Manager: HttpDownloadOrchestrator
-    Manager->>Strategy: download(task, context, emitter)
-    alt server accepts ranges and size >= 5 MB
+    Coord->>Coord: pending(IN_PROGRESS, 0 bytes)
+    Manager->>Strategy: resolve and download(task, context, emitter)
+    alt Accept-Ranges and size >= 5 MB
         Strategy->>Strategy: SegmentedHttpDownloadStrategy
-    else no range support, small file, or probe failure
+    else otherwise or probe failure
         Strategy->>Strategy: HttpDownloadStrategy
     end
-    loop per read buffer or chunk write
+    Strategy->>Strategy: register CheckpointSource (ETag, segments, confirmed bytes)
+    loop per read buffer / chunk write, with RetryExecutor
         Strategy->>Events: DownloadProgressEvent
         Strategy->>Strategy: awaitIfPaused(...)
     end
+    Note over Coord: every 5 s (and on pause) buildSnapshot + save
     Strategy->>Events: DownloadCompletedEvent
-    Manager->>Registry: remove(id) in finally
+    Coord->>Coord: delete manifest
+    Manager->>Manager: remove task in finally
 ```
 
-### What the sequence fixes in place
+Key points:
 
-- `download()` is non-blocking: it registers the task, hands it to the executor, and returns `DownloadSubmissionResult` with status `PENDING` immediately.
-- The `DownloadStartedEvent` is emitted by the manager on the download thread, before the strategy is resolved.
-- `DefaultDownloadStrategyResolver` maps only `http` and `https` to `HttpDownloadOrchestrator`; any other scheme raises `IllegalArgumentException`, which the manager turns into a `DownloadFailedEvent`.
-- `HttpDownloadOrchestrator` probes the server with `HttpRangeSupport.probe()`. Segmented download requires `Accept-Ranges: bytes` **and** a content length of at least `segmentMinSizeBytes` (default 5 MB); a failed probe falls back silently to single-stream.
-- Progress is emitted per read buffer (8 KB default) in the single-stream strategy, and per chunk write in the segmented strategy. Chunk threads share an atomic byte counter, so progress is aggregated.
-- Events are delivered synchronously on the download thread; consumers that touch a UI must marshal to their own thread.
-- The task is removed from the registry in a `finally` block, so terminal state is not queryable after completion.
+- Submission is non-blocking. `download()` returns `PENDING`; work runs on a virtual thread bounded by a semaphore.
+- `DefaultDownloadStrategyResolver` accepts only `http`/`https`; other schemes fail with `IllegalArgumentException`.
+- The orchestrator probes range support and content length. Segmentation needs both `Accept-Ranges: bytes` and a size ≥ `segmentMinSizeBytes` (5 MB default).
+- Each strategy registers a `CheckpointSource` after response/segment negotiation. Snapshots include strong ETag, expected length, confirmed bytes, and segment boundaries.
+- Retry is active: `RetryExecutor` wraps read/connection work; `HttpFailureClassifier` decides retryability. A per-request `RetryConfig` overrides the global config.
+- Progress is per buffer/chunk. Events are synchronous on the download thread; UI code must marshal to its own thread.
+- Terminal completion deletes the checkpoint manifest.
 
 ## Pause and resume
 
@@ -60,64 +62,74 @@ sequenceDiagram
     participant Manager as DownloadManager
     participant Pause as PauseCoordinator
     participant Strategy as DownloadStrategy
-    participant Events as Event listeners
+    participant Coord as CheckpointCoordinator
 
     Client->>Manager: pause(id)
     Manager->>Pause: requestPause(id)
     Manager-->>Client: DownloadControlResult(PAUSE, REQUESTED)
     Strategy->>Pause: awaitIfPaused(id, token, listener)
-    Pause->>Events: DownloadPausedEvent
-    Note over Pause: blocks while pauseRequested,<br/>re-checks cancellation every 250 ms
+    Pause->>Coord: DownloadPausedEvent
+    Coord->>Coord: buildSnapshot(PAUSED) and save immediately
+    Note over Pause: blocks, polls cancellation every 250 ms
     Client->>Manager: resume(id)
     Manager->>Pause: requestResume(id)
     Pause->>Pause: signalAll()
     Manager-->>Client: DownloadControlResult(RESUME, REQUESTED)
-    Pause->>Events: DownloadResumedEvent
+    Pause->>Strategy: onResumed
 ```
 
-- Pause is cooperative and checkpoint-based: the strategy calls `awaitIfPaused` after each unit of work, so the transfer stops at the next buffer or chunk boundary.
-- The control call returns `REQUESTED`, not `PAUSED`: acceptance does not mean the transfer has already stopped.
-- A paused download can still be cancelled; the pause wait polls the cancellation token every 250 ms.
-- In segmented downloads, every chunk thread calls `awaitIfPaused`, but `SegmentedHttpDownloadStrategy` guards the callbacks with shared `AtomicBoolean` flags so exactly one `DownloadPausedEvent` and one `DownloadResumedEvent` are emitted per signal (see K-0.1-T01).
+- Pause is checkpoint-based: the worker stops at the next buffer/chunk boundary.
+- `REQUESTED` means accepted, not already stopped.
+- Pause writes a checkpoint synchronously, so the manifest reflects the pause point.
+- Segmented downloads guard the callbacks with shared `AtomicBoolean` flags, so exactly one pause and one resume event are emitted per signal (K-0.1-T01).
 
-## Cancellation
+## Explicit cancellation
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client
     participant Manager as DownloadManager
-    participant Registry as DownloadRegistry
     participant Task as DownloadTask
     participant Strategy as DownloadStrategy
     participant Events as Event listeners
+    participant Coord as CheckpointCoordinator
 
     Client->>Manager: cancel(id)
-    Manager->>Registry: findTask(id)
-    Registry-->>Manager: task
     Manager->>Task: requestCancellation()
     Manager-->>Client: DownloadControlResult(CANCEL, REQUESTED)
     Strategy->>Task: isCancellationRequested()
     Strategy->>Strategy: throwCancelled(progress)
     Strategy->>Events: DownloadCancelledEvent
-    Manager->>Registry: remove(id) in finally
+    Coord->>Coord: delete manifest
+    Manager->>Manager: remove task in finally
 ```
 
-- Cancellation is a flag, not an interrupt. The strategy observes `CancellationToken` at the next buffer or chunk boundary and throws `DownloadCancelledException`.
-- The exception carries the bytes read, total bytes, and a progress ratio so the cancellation event is informative.
-- If the download is paused, the pause wait sees the cancellation token and returns, allowing the strategy to throw.
+- Cancellation is a cooperative flag, not a thread interrupt.
+- `DownloadCancelledException` carries bytes read, total bytes, and progress.
+- A paused download can still be cancelled; the pause wait polls the token.
+- Explicit cancellation deletes the manifest, so the download is not recoverable.
 
 ## Failure
 
-There are two failure entry points, both producing `DownloadFailedEvent`:
+Two failure paths both produce `DownloadFailedEvent`:
 
-1. **Inside a strategy** — any non-cancellation exception is caught by `HttpDownloadStrategy` / `SegmentedHttpDownloadStrategy` and passed to `HttpDownloadSupport.onError`, which maps it to a `DownloadErrorCode`.
-2. **During resolution** — an unsupported scheme or invalid request throws before a strategy runs; `DefaultDownloadManager.runDownload` catches it and emits the failure event.
+1. **Inside a strategy** — non-cancellation exceptions go through `HttpDownloadSupport.onError` and are mapped to a `DownloadErrorCode`.
+2. **Before execution** — unsupported scheme or invalid request fails in the manager's `runDownload`.
 
-In both cases the registry entry is removed and pause coordination state is cleared in the `finally` block.
+`CheckpointCoordinator` retains a `FAILED` snapshot for inspection instead of deleting it. The task is removed from the registry in `finally`.
+
+## Shutdown is not cancellation
+
+Shutdown-initiated termination suppresses `DownloadCancelledEvent`. The manifest remains `IN_PROGRESS` with post-quiescence progress. Full ordering: [Architecture — Graceful Shutdown](../architecture/katabasis-core.md#graceful-shutdown). CLI behavior: [CLI lifecycle](cli-lifecycle.md).
+
+## Recovery status
+
+Checkpoint discovery exists (`DownloadStateStore.findRecoverable()`), but **resume after restart is not implemented**. K-0.2-T11 is pending. Do not describe the flow above as recovery.
 
 ## Related
 
 - [Architecture: current state](../architecture/katabasis-core.md)
+- [Checkpointing](../architecture/checkpointing.md)
+- [CLI lifecycle](cli-lifecycle.md)
 - [Class model](../architecture/class-model.md)
-- [Editorial version of the happy path](diagrams/download-lifecycle.html)

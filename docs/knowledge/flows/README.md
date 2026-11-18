@@ -8,7 +8,8 @@ Use this area for behavior that is easier to understand as an ordered exchange t
 
 ## Contents
 
-- [download-lifecycle.md](download-lifecycle.md) — submit, execute, progress, pause/resume, cancel, and failure for a single download.
+- [download-lifecycle.md](download-lifecycle.md) — submit, execute, progress, pause/resume, cancel, failure, and checkpoint interaction for a single download.
+- [cli-lifecycle.md](cli-lifecycle.md) — commands, interactive controls, shutdown versus cancellation, exit codes, and structured errors.
 
 ## Editorial diagram
 
