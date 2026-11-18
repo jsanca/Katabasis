@@ -8,13 +8,25 @@
         <outputRelativeToContentRoot value="true" />
         <module name="katabasis-ui" />
         <module name="katabasis-cli" />
-        <module name="katabasis-core" />
+      </profile>
+      <profile name="Annotation profile for katabasis-parent" enabled="true">
+        <sourceOutputDir name="../generated-sources/annotations" />
+        <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
+        <module name="katabasis-core.main" />
+        <module name="katabasis-storage-json.test" />
+        <module name="katabasis-core.test" />
+        <module name="katabasis-storage-json.main" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="katabasis-core" options="--enable-preview" />
+      <module name="katabasis-core.main" options="--enable-preview" />
+      <module name="katabasis-core.test" options="--enable-preview --add-reads jsanca.katabasis.core=jakarta.json.bind --add-reads jsanca.katabasis.core=jakarta.json --add-reads jsanca.katabasis.core=org.eclipse.yasson" />
+      <module name="katabasis-storage-json" options="--enable-preview" />
+      <module name="katabasis-storage-json.main" options="--enable-preview" />
+      <module name="katabasis-storage-json.test" options="--enable-preview --add-reads jsanca.katabasis.storage.json=ALL-UNNAMED" />
     </option>
   </component>
 </project>

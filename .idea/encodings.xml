@@ -5,6 +5,8 @@
     <file url="file://$PROJECT_DIR$/katabasis-cli/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/katabasis-core/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/katabasis-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/katabasis-storage-json/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/katabasis-storage-json/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/katabasis-ui/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/katabasis-ui/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
