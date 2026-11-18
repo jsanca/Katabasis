@@ -8,6 +8,8 @@ import jsanca.katabasis.core.api.event.DownloadPausedEvent;
 import jsanca.katabasis.core.api.event.DownloadProgressEvent;
 import jsanca.katabasis.core.api.event.DownloadStartedEvent;
 import jsanca.katabasis.core.api.event.DownloadErrorCode;
+import jsanca.katabasis.core.api.manager.CheckpointSource;
+import jsanca.katabasis.core.api.manager.CheckpointSourceProvider;
 import jsanca.katabasis.core.api.manager.DownloadManager;
 import jsanca.katabasis.core.api.manager.DownloadStateStore;
 import jsanca.katabasis.core.api.model.DownloadControlResult;
@@ -282,5 +284,95 @@ class CheckpointCoordinatorTest {
             }
         }
         return -1;
+    }
+
+    // ── notifyShutdownCheckpoint tests ────────────────────────────────────────
+
+    private static DownloadSnapshot buildSnapshot(final String id, final DownloadStatus status,
+                                                   final long confirmedBytes) {
+        return new DownloadSnapshot(
+                id, SOURCE, DEST, null, null, 1024L, confirmedBytes,
+                status, List.of(), Instant.now(), Instant.now());
+    }
+
+    @Test
+    void notifyShutdownCheckpointSavesSnapshotToStore() {
+        final StubDownloadManager manager = new StubDownloadManager();
+        final CapturingStateStore store   = new CapturingStateStore();
+
+        final CheckpointCoordinator coord = CheckpointCoordinator.create(
+                manager, store, Duration.ofMinutes(60));
+
+        final DownloadSnapshot snap = buildSnapshot(DL_ID, DownloadStatus.IN_PROGRESS, 512L);
+        coord.notifyShutdownCheckpoint(snap);
+        coord.close();
+
+        assertTrue(store.saved.stream().anyMatch(s -> s.downloadId().equals(DL_ID)),
+                "notifyShutdownCheckpoint must persist the snapshot");
+    }
+
+    @Test
+    void notifyShutdownCheckpointRemovesFromPendingBeforeSave() {
+        final StubDownloadManager manager = new StubDownloadManager();
+        final CapturingStateStore store   = new CapturingStateStore();
+
+        // Very long interval — only close() would trigger a periodic flush
+        final CheckpointCoordinator coord = CheckpointCoordinator.create(
+                manager, store, Duration.ofMinutes(60));
+
+        // Prime the pending map with a progress event
+        manager.publish(new DownloadStartedEvent(INFO, Instant.now()));
+        manager.publish(new DownloadProgressEvent(INFO, 100L, 1024L, Instant.now()));
+
+        // notifyShutdownCheckpoint with authoritative snapshot (512 bytes)
+        final DownloadSnapshot snap = buildSnapshot(DL_ID, DownloadStatus.IN_PROGRESS, 512L);
+        coord.notifyShutdownCheckpoint(snap);
+
+        // close() performs a final flush — pending entry was removed by notifyShutdownCheckpoint
+        // so the flush must NOT overwrite the authoritative snapshot with stale data
+        coord.close();
+
+        final DownloadSnapshot last = store.lastSaved();
+        assertEquals(512L, last.confirmedBytes(),
+                "close() must not overwrite the authoritative shutdown snapshot");
+    }
+
+    @Test
+    void notifyShutdownCheckpointNullSnapThrows() {
+        final StubDownloadManager manager = new StubDownloadManager();
+        final CapturingStateStore store   = new CapturingStateStore();
+
+        try (final CheckpointCoordinator coord = CheckpointCoordinator.create(
+                manager, store, Duration.ofMinutes(60))) {
+            assertThrows(NullPointerException.class,
+                    () -> coord.notifyShutdownCheckpoint(null));
+        }
+    }
+
+    @Test
+    void notifyShutdownCheckpointWithSourceProviderPreventsFlushOverwrite() {
+        final StubDownloadManager manager = new StubDownloadManager();
+        final CapturingStateStore store   = new CapturingStateStore();
+
+        // Source provider returns a snapshot with 200 bytes (simulates "stale" source data)
+        final CheckpointSource source = at -> buildSnapshot(DL_ID, DownloadStatus.IN_PROGRESS, 200L);
+        final CheckpointSourceProvider provider = id -> Optional.of(source);
+
+        final CheckpointCoordinator coord = CheckpointCoordinator.create(
+                manager, provider, store, Duration.ofMinutes(60), ev -> {});
+
+        manager.publish(new DownloadStartedEvent(INFO, Instant.now()));
+        manager.publish(new DownloadProgressEvent(INFO, 150L, 1024L, Instant.now()));
+
+        // notifyShutdownCheckpoint with authoritative snapshot (900 bytes, post-quiescence)
+        final DownloadSnapshot authoritative = buildSnapshot(DL_ID, DownloadStatus.IN_PROGRESS, 900L);
+        coord.notifyShutdownCheckpoint(authoritative);
+
+        // close() flushPending() must not re-query the source for this ID (removed from pending)
+        coord.close();
+
+        final DownloadSnapshot last = store.lastSaved();
+        assertEquals(900L, last.confirmedBytes(),
+                "close() must not overwrite the authoritative post-quiescence snapshot");
     }
 }

@@ -93,8 +93,11 @@ public class DownloadCommand implements Callable<Integer> {
                 System.err.println("Warning: could not create checkpoint directory: " + ex.getMessage());
             }
             final DownloadStateStore store = DownloadStateStores.fileStore(checkpointDir);
+            // Lambda captures the field reference; coordinator is set two lines later.
+            // The consumer is only invoked at shutdown (inside manager.close()), by which
+            // time checkpointCoordinator is non-null.
             final DownloadManager real = DownloadManagers.createDefault(config,
-                    snap -> { try { store.save(snap); } catch (Exception ignored) {} });
+                    snap -> { if (checkpointCoordinator != null) { checkpointCoordinator.notifyShutdownCheckpoint(snap); } });
             this.checkpointCoordinator = CheckpointCoordinator.create(
                     real, (CheckpointSourceProvider) real, store,
                     Duration.ofSeconds(5), ev -> {});
@@ -249,10 +252,10 @@ public class DownloadCommand implements Callable<Integer> {
                 // JVM is already shutting down — hook cannot be deregistered
             }
             manager.removeListener(listener);
+            manager.close();
             if (checkpointCoordinator != null) {
                 try { checkpointCoordinator.close(); } catch (Exception ignored) {}
             }
-            manager.close();
         }
 
         return exitCode.get();

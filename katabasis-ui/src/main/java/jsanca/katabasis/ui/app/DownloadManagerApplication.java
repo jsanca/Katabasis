@@ -95,9 +95,12 @@ public final class DownloadManagerApplication extends Application {
             logger.warn("Could not create checkpoint directory: {}", ex.getMessage());
         }
         final DownloadStateStore checkpointStore = DownloadStateStores.fileStore(checkpointDir);
+        // Lambda captures the field reference; checkpointCoordinator is set two lines later.
+        // The consumer is only invoked at shutdown (inside downloadManager.close()), by
+        // which time checkpointCoordinator is non-null.
         this.downloadManager = DownloadManagers.createDefault(
                 jsanca.katabasis.core.api.model.DownloadConfig.defaultConfig(),
-                snap -> { try { checkpointStore.save(snap); } catch (Exception ignored) {} });
+                snap -> { if (checkpointCoordinator != null) { checkpointCoordinator.notifyShutdownCheckpoint(snap); } });
         this.checkpointCoordinator = CheckpointCoordinator.create(
                 this.downloadManager, (CheckpointSourceProvider) this.downloadManager,
                 checkpointStore, java.time.Duration.ofSeconds(5), ev -> {});
@@ -172,11 +175,11 @@ public final class DownloadManagerApplication extends Application {
 
     @Override
     public void stop() {
-        if (checkpointCoordinator != null) {
-            try { checkpointCoordinator.close(); } catch (Exception ignored) {}
-        }
         if (downloadManager != null) {
             try { downloadManager.close(); } catch (Exception ignored) {}
+        }
+        if (checkpointCoordinator != null) {
+            try { checkpointCoordinator.close(); } catch (Exception ignored) {}
         }
     }
 

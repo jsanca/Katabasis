@@ -267,6 +267,26 @@ public final class CheckpointCoordinator implements AutoCloseable {
 
     // ── flush ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Records an authoritative post-quiescence snapshot for a download that was active
+     * when the manager shut down. Atomically removes the stale event-derived entry from
+     * the pending map (preventing a future flush from overwriting the authoritative snapshot)
+     * and persists the snapshot to the store.
+     *
+     * <p>This must be called after the manager's workers have reached quiescence and before
+     * {@link #close()} is called.
+     *
+     * @param snap the final consistent snapshot built from the download's {@link CheckpointSource}
+     */
+    public void notifyShutdownCheckpoint(final DownloadSnapshot snap) {
+        Objects.requireNonNull(snap, "snap must not be null");
+        // Remove before saving: if a concurrent periodic flush wins the computeIfPresent race
+        // and saves the stale entry, our subsequent saveWithObservability call overwrites it.
+        // If we remove first, the flush is a no-op. Either way the authoritative snapshot wins.
+        pending.remove(snap.downloadId());
+        saveWithObservability(snap);
+    }
+
     private void flushPending() {
         pending.forEach((id, snap) ->
                 pending.computeIfPresent(id, (k, existing) -> {

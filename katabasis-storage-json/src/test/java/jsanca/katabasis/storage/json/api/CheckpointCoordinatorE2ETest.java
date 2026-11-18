@@ -224,4 +224,5 @@ class CheckpointCoordinatorE2ETest {
                     "Status should not be COMPLETED for an interrupted download");
         }
     }
+
 }

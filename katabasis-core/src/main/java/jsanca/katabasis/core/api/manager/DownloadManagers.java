@@ -1,6 +1,7 @@
 package jsanca.katabasis.core.api.manager;
 
 import jsanca.katabasis.core.api.event.DownloadCancelledEvent;
+import jsanca.katabasis.core.api.event.DownloadCompletedEvent;
 import jsanca.katabasis.core.api.event.DownloadErrorCode;
 import jsanca.katabasis.core.api.event.DownloadEvent;
 import jsanca.katabasis.core.api.event.DownloadFailedEvent;
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,13 +72,13 @@ public final class DownloadManagers {
     /**
      * Creates a default {@link DownloadManager} with a shutdown snapshot consumer.
      *
-     * <p>When the manager is closed, it calls {@code shutdownSnapshotConsumer} once per
-     * active download <em>before</em> signalling cancellation, so the consumer receives
-     * the final pre-cancel state. This hook is intended for the checkpoint coordinator to
-     * persist the last known state before the manager tears down.
+     * <p>When the manager is closed, it cancels all active downloads, waits for workers to
+     * reach quiescence, and then calls {@code shutdownSnapshotConsumer} once per download
+     * that had a registered {@link CheckpointSource}. Snapshots are built after workers stop,
+     * so the confirmed-bytes values are final and consistent.
      *
      * @param config                   the downloader configuration
-     * @param shutdownSnapshotConsumer called with each active download's snapshot at shutdown
+     * @param shutdownSnapshotConsumer called with each active download's post-quiescence snapshot
      * @return a configured download manager that also implements {@link CheckpointSourceProvider}
      */
     public static DownloadManager createDefault(final DownloadConfig config,
@@ -113,6 +115,9 @@ public final class DownloadManagers {
         private final ReentrantReadWriteLock lifecycleLock = new ReentrantReadWriteLock();
         private final CountDownLatch closeLatch = new CountDownLatch(1);
         private final Set<String> shutdownCancelledIds = ConcurrentHashMap.newKeySet();
+        // IDs that completed or failed naturally during the executor drain window; these must
+        // not receive a post-quiescence notifyShutdownCheckpoint call (coordinator already handled them).
+        private final Set<String> naturallyTerminatedDuringShutdown = ConcurrentHashMap.newKeySet();
 
         DefaultDownloadManager(final DownloadConfig config,
                                final DownloadExecutor executor,
@@ -235,6 +240,18 @@ public final class DownloadManagers {
                     && shutdownCancelledIds.contains(cancelled.downloadInfo().downloadId())) {
                 return;
             }
+            // Track downloads that terminate for reasons other than shutdown cancellation.
+            // The post-quiescence loop skips these IDs because the coordinator already handled
+            // the terminal event (deleted the manifest for Completed; saved FAILED snapshot for Failed).
+            // Always track Completed. Track Failed only when the ID is not in shutdownCancelledIds
+            // (i.e., the failure was not caused by shutdown cancellation — those still need a
+            // post-quiescence checkpoint).
+            if (event instanceof DownloadCompletedEvent completed) {
+                naturallyTerminatedDuringShutdown.add(completed.info().downloadId());
+            } else if (event instanceof DownloadFailedEvent failed
+                    && !shutdownCancelledIds.contains(failed.info().downloadId())) {
+                naturallyTerminatedDuringShutdown.add(failed.info().downloadId());
+            }
             for (final Consumer<DownloadEvent> listener : listeners) {
                 listener.accept(event);
             }
@@ -330,29 +347,23 @@ public final class DownloadManagers {
         public void close() {
             lifecycleLock.writeLock().lock();
             final boolean isFirstCaller;
+            final List<DownloadTask> activeTasks;
             try {
                 if (lifecycle == ManagerLifecycle.OPEN) {
                     lifecycle = ManagerLifecycle.SHUTTING_DOWN;
                     isFirstCaller = true;
-                    for (final DownloadTask task : downloadRegistry.allTasks()) {
+                    // Capture task references before cancellation; allTasks() returns a
+                    // defensive copy so iteration is safe outside the lock.
+                    activeTasks = new ArrayList<>(downloadRegistry.allTasks());
+                    for (final DownloadTask task : activeTasks) {
                         final String id = task.info().downloadId();
-                        // Snapshot before cancel so the consumer sees the last pre-cancel state.
-                        if (shutdownSnapshotConsumer != null) {
-                            final CheckpointSource src = task.checkpointSource();
-                            if (src != null) {
-                                try {
-                                    shutdownSnapshotConsumer.accept(src.buildSnapshot(Instant.now()));
-                                } catch (final Exception ex) {
-                                    log.warn("Failed to build shutdown snapshot for {}", id, ex);
-                                }
-                            }
-                        }
                         shutdownCancelledIds.add(id);
                         pauseCoordinator.clear(id);
                         task.requestCancellation();
                     }
                 } else {
                     isFirstCaller = false;
+                    activeTasks = List.of();
                 }
             } finally {
                 lifecycleLock.writeLock().unlock();
@@ -368,8 +379,27 @@ public final class DownloadManagers {
             }
 
             try {
-                executor.close();
+                executor.close(); // blocks until workers reach quiescence (or timeout)
             } finally {
+                // Build authoritative snapshots after workers stop. CheckpointSource is
+                // still accessible via the captured task reference even after registry removal.
+                if (shutdownSnapshotConsumer != null) {
+                    final Instant now = Instant.now();
+                    for (final DownloadTask task : activeTasks) {
+                        final String id = task.info().downloadId();
+                        if (naturallyTerminatedDuringShutdown.contains(id)) {
+                            continue; // coordinator already handled completed/failed terminal event
+                        }
+                        final CheckpointSource src = task.checkpointSource();
+                        if (src != null) {
+                            try {
+                                shutdownSnapshotConsumer.accept(src.buildSnapshot(now));
+                            } catch (final Exception ex) {
+                                log.warn("Failed to build shutdown snapshot for {}", id, ex);
+                            }
+                        }
+                    }
+                }
                 lifecycle = ManagerLifecycle.CLOSED;
                 closeLatch.countDown();
             }
