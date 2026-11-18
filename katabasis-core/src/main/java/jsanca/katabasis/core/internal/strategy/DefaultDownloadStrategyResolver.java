@@ -20,13 +20,6 @@ public final class DefaultDownloadStrategyResolver implements DownloadStrategyRe
     private final DownloadStrategy httpDownloadStrategy;
 
     /**
-     * Creates a resolver using default configuration.
-     */
-    public DefaultDownloadStrategyResolver() {
-        this(DownloadConfig.defaultConfig());
-    }
-
-    /**
      * Creates a resolver using the given download configuration.
      *
      * @param config the configuration driving segmentation thresholds and counts

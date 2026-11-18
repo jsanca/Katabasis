@@ -1,10 +1,7 @@
 package jsanca.katabasis.core.api.manager;
 
-import jsanca.katabasis.core.api.model.DownloadTaskSnapshot;
 import jsanca.katabasis.core.internal.model.DownloadTask;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,17 +45,6 @@ public final class DownloadRegistry {
     }
 
     /**
-     * Finds a snapshot by download identifier.
-     *
-     * @param downloadId the download identifier
-     * @return an optional containing the task snapshot when present
-     * @throws NullPointerException if {@code downloadId} is {@code null}
-     */
-    public Optional<DownloadTaskSnapshot> findSnapshot(final String downloadId) {
-        return findTask(downloadId).map(DownloadTask::snapshot);
-    }
-
-    /**
      * Returns whether a task with the given identifier is registered.
      *
      * @param downloadId the download identifier
@@ -80,22 +66,6 @@ public final class DownloadRegistry {
     public Optional<DownloadTask> remove(final String downloadId) {
         Objects.requireNonNull(downloadId, "downloadId must not be null");
         return Optional.ofNullable(this.tasks.remove(downloadId));
-    }
-
-    /**
-     * Returns an immutable snapshot map of the current registry state.
-     *
-     * <p>The returned map is detached from the internal registry and contains
-     * immutable task snapshots keyed by download identifier.
-     *
-     * @return immutable map of download snapshots
-     */
-    public Map<String, DownloadTaskSnapshot> snapshotAll() {
-        final Map<String, DownloadTaskSnapshot> snapshots = new LinkedHashMap<>();
-        for (Map.Entry<String, DownloadTask> entry : this.tasks.entrySet()) {
-            snapshots.put(entry.getKey(), entry.getValue().snapshot());
-        }
-        return Collections.unmodifiableMap(snapshots);
     }
 
     /**

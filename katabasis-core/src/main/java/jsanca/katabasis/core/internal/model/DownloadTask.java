@@ -99,15 +99,6 @@ public final class DownloadTask {
     }
 
     /**
-     * Returns the pause token associated with this task.
-     *
-     * @return the cooperative pause token
-     */
-    public PauseToken pauseToken() {
-        return pauseToken;
-    }
-
-    /**
      * Returns whether cancellation has been requested for this task.
      *
      * @return {@code true} if cancellation was requested; {@code false} otherwise
@@ -159,13 +150,6 @@ public final class DownloadTask {
     }
 
     /**
-     * Marks the task as started.
-     */
-    public void markStarted() {
-        updateStatus(DownloadStatus.IN_PROGRESS);
-    }
-
-    /**
      * Updates the current progress values and refreshes the last-updated timestamp.
      *
      * @param downloadedBytes the downloaded bytes so far
@@ -183,34 +167,6 @@ public final class DownloadTask {
         this.downloadedBytes.set(downloadedBytes);
         this.totalBytes.set(totalBytes);
         touch();
-    }
-
-    /**
-     * Marks the task as completed and updates final progress values.
-     *
-     * @param downloadedBytes the final downloaded bytes
-     * @param totalBytes the final total bytes
-     */
-    public void markCompleted(final long downloadedBytes, final long totalBytes) {
-        updateProgress(downloadedBytes, totalBytes);
-        updateStatus(DownloadStatus.COMPLETED);
-    }
-
-    /**
-     * Marks the task as failed with the provided message.
-     *
-     * @param message the failure message, may be {@code null}
-     */
-    public void markFailed(final String message) {
-        this.errorMessage.set(message);
-        updateStatus(DownloadStatus.FAILED);
-    }
-
-    /**
-     * Marks the task as cancelled.
-     */
-    public void markCancelled() {
-        updateStatus(DownloadStatus.CANCELLED);
     }
 
     /**

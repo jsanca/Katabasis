@@ -14,32 +14,6 @@ public final class Preconditions {
     }
 
     /**
-     * Requires {@code condition} to be {@code true}.
-     *
-     * @param condition the condition that must hold
-     * @param message the message used when the condition is false
-     * @throws IllegalArgumentException if {@code condition} is {@code false}
-     */
-    public static void check(final boolean condition, final String message) {
-        if (!condition) {
-            throw new IllegalArgumentException(message);
-        }
-    }
-
-    /**
-     * Requires {@code condition} to be {@code true}, building the message lazily.
-     *
-     * @param condition the condition that must hold
-     * @param message supplier evaluated only when the condition is false
-     * @throws IllegalArgumentException if {@code condition} is {@code false}
-     */
-    public static void check(final boolean condition, final Supplier<String> message) {
-        if (!condition) {
-            throw new IllegalArgumentException(message.get());
-        }
-    }
-
-    /**
      * Requires {@code condition} to be {@code false}.
      *
      * @param condition the condition that must not hold
