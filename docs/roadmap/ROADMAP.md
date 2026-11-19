@@ -83,13 +83,13 @@ This document records committed project direction for Katabasis 0.1 through 0.4.
 
 ### Definition of Done — 0.2
 
-- [ ] `katabasis-cli` compiles with `requires jsanca.katabasis.core`
-- [ ] `katabasis download <url>` works end-to-end with progress output
-- [ ] `katabasis download --list urls.txt` downloads all URLs with configurable concurrency
-- [ ] Exit code is non-zero when any download fails
-- [ ] A download interrupted by SIGTERM is recorded; restarting with the same destination resumes from the last checkpoint (HTTP range required)
-- [ ] Checksum validation flag works for SHA-256 at minimum
-- [ ] No regressions in core or UI
+- [x] `katabasis-cli` compiles with `requires jsanca.katabasis.core` — K-0.2-T01/T02
+- [x] `katabasis download <url>` works end-to-end with progress output — K-0.2-T04; smoke-tested K-0.2-RELEASE-VERIFY-001
+- [x] `katabasis download --list urls.txt` downloads all URLs with configurable concurrency — K-0.2-T05; smoke-tested K-0.2-RELEASE-VERIFY-001
+- [x] Exit code is non-zero when any download fails — K-0.2-T08; verified K-0.2-RELEASE-VERIFY-001
+- [ ] A download interrupted by SIGTERM is recorded; restarting with the same destination resumes from the last checkpoint — **BLOCKED on K-0.2-T11 (not implemented)**
+- [ ] Checksum validation flag works for SHA-256 at minimum — K-0.2-T12 (not implemented)
+- [x] No regressions in core or UI — 364/364 tests pass; smoke-tested K-0.2-RELEASE-VERIFY-001
 
 ---
 
